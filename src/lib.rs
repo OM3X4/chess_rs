@@ -1,7 +1,7 @@
 #[allow(unused_variables)]
 #[allow(dead_code)]
 
-mod chess {
+pub mod chess {
 
     const KNIGHTS_ATTACK_TABLE: [u64; 64] = [
         0x0000000000020400,
@@ -241,7 +241,7 @@ mod chess {
                         file += number as u64;
                     } else {
                         let square_index = (7 - rank as u64) * 8 + file;
-                        let bit = generate_bitboard_with_one_piece(square_index);
+                        let bit = 1u64 << square_index;
                         let target_board = match char {
                             'P' => Some(&mut self.bitboards.white_pawns),
                             'R' => Some(&mut self.bitboards.white_rooks),
@@ -259,7 +259,7 @@ mod chess {
                         };
 
                         if let Some(bitboard) = target_board {
-                            bitboard.0 = bit.0 | bitboard.0;
+                            bitboard.0 = bit | bitboard.0;
                             file += 1;
                         }
                     }
@@ -313,13 +313,13 @@ mod chess {
             };
 
             for from in extract_bits(&pawn_squares) {
-                let pawn_bb = generate_bitboard_with_one_piece(from);
+                let pawn_bb = 1u64 << from;
 
                 // single and double jump
-                if from < 55 && (blockers & generate_bitboard_with_one_piece(from + 8).0) == 0 {
+                if from < 55 && (blockers & 1u64 << from + 8) == 0 {
                     add(from.into(), (from + 8).into(), false);
                     if ((from as u64 & RANK_2) != 0)
-                        && (blockers & generate_bitboard_with_one_piece(from + 16).0) == 0
+                        && (blockers & 1u64 << (from + 16)) == 0
                     {
                         add(from.into(), (from + 16).into(), false);
                     }
@@ -327,15 +327,15 @@ mod chess {
 
                 // attack left
                 if from + 7 < 63
-                    && ((enemy_pieces_bb.0 & generate_bitboard_with_one_piece(from + 7).0) != 0)
-                    && ((pawn_bb.0 & FILE_A) == 0)
+                    && ((enemy_pieces_bb.0 & 1u64 << (from + 7)) != 0)
+                    && ((pawn_bb & FILE_A) == 0)
                 {
                     add(from.into(), from + 7, true);
                 }
                 // attack right
                 if from + 9 < 63
-                    && (enemy_pieces_bb.0 & generate_bitboard_with_one_piece(from + 9).0) != 0
-                    && ((pawn_bb.0 & FILE_H) == 0)
+                    && (enemy_pieces_bb.0 & 1u64 << (from + 9)) != 0
+                    && ((pawn_bb & FILE_H) == 0)
                 {
                     add(from.into(), from + 9, true);
                 }
@@ -353,13 +353,13 @@ mod chess {
             };
 
             for from in extract_bits(&pawn_squares) {
-                let pawn_bb = generate_bitboard_with_one_piece(from);
+                let pawn_bb = 1u64 << from;
 
                 // single and double jump
-                if from >= 8 && (blockers & generate_bitboard_with_one_piece(from - 8).0) == 0 {
+                if from >= 8 && (blockers & 1u64 << (from - 8)) == 0 {
                     add(from.into(), (from - 8).into(), false);
                     if ((from as u64 & RANK_7) != 0)
-                        && (blockers & generate_bitboard_with_one_piece(from - 16).0) == 0
+                        && (blockers & 1u64 << (from - 16)) == 0
                     {
                         add(from.into(), (from - 16).into(), false);
                     }
@@ -367,15 +367,15 @@ mod chess {
 
                 // attack left
                 if from - 7 > 0
-                    && ((enemy_pieces_bb.0 & generate_bitboard_with_one_piece(from - 7).0) != 0)
-                    && ((pawn_bb.0 & FILE_H) == 0)
+                    && ((enemy_pieces_bb.0 & 1u64 << (from - 7)) != 0)
+                    && ((pawn_bb & FILE_H) == 0)
                 {
                     add(from.into(), from - 7, true);
                 }
                 // attack right
                 if from - 9 > 0
-                    && (enemy_pieces_bb.0 & generate_bitboard_with_one_piece(from - 9).0) != 0
-                    && ((pawn_bb.0 & FILE_A) == 0)
+                    && (enemy_pieces_bb.0 & 1u64 << (from - 9)) != 0
+                    && ((pawn_bb & FILE_A) == 0)
                 {
                     add(from.into(), from - 9, true);
                 }
@@ -385,6 +385,7 @@ mod chess {
         pub fn generate_rook_moves(&self , moves: &mut Vec<Move>) {
             let allay_bits = &self.get_allay_pieces();
             let enemy_bits = &self.get_enemy_pieces();
+            let all_bits = &self.get_all_bits().0;
 
             let mut add = |from: u64, to: u64, capture: bool| {
                 moves.push(Move::new(from.into(), to.into(), capture));
@@ -399,12 +400,12 @@ mod chess {
                 // North
                 if from < 56 {
                     for to in ((from + 8)..=63).step_by(8) {
-                        let to_mask = generate_bitboard_with_one_piece(to);
-                        if allay_bits.0 & to_mask.0 != 0 {
+                        let to_mask = 1u64 << (to);
+                        if allay_bits.0 & to_mask != 0 {
                             break;
                         }
-                        add(from, to, (enemy_bits.0 & to_mask.0) != 0);
-                        if self.get_all_bits().0 & to_mask.0 != 0 {
+                        add(from, to, (enemy_bits.0 & to_mask) != 0);
+                        if all_bits & to_mask != 0 {
                             break;
                         };
                     }
@@ -412,12 +413,12 @@ mod chess {
                 // South
                 if from > 7 {
                     for to in (0..=(from - 8)).rev().step_by(8) {
-                        let to_mask = generate_bitboard_with_one_piece(to);
-                        if allay_bits.0 & to_mask.0 != 0 {
+                        let to_mask = 1u64 << (to);
+                        if allay_bits.0 & to_mask != 0 {
                             break;
                         }
-                        add(from, to, (enemy_bits.0 & to_mask.0) != 0);
-                        if self.get_all_bits().0 & to_mask.0 != 0 {
+                        add(from, to, (enemy_bits.0 & to_mask) != 0);
+                        if all_bits & to_mask != 0 {
                             break;
                         };
                     }
@@ -427,12 +428,12 @@ mod chess {
                 if from % 8 != 7 {
                     let mut to = from + 1;
                     while to % 8 != 0 {
-                        let to_mask = generate_bitboard_with_one_piece(to);
-                        if allay_bits.0 & to_mask.0 != 0 {
+                        let to_mask = 1u64 << (to);
+                        if allay_bits.0 & to_mask != 0 {
                             break;
                         }
-                        add(from, to, (enemy_bits.0 & to_mask.0) != 0);
-                        if self.get_all_bits().0 & to_mask.0 != 0 {
+                        add(from, to, (enemy_bits.0 & to_mask) != 0);
+                        if all_bits & to_mask != 0 {
                             break;
                         };
                         to += 1;
@@ -443,12 +444,12 @@ mod chess {
                 if from % 8 != 0 {
                     let mut to = from - 1;
                     while to % 8 != 7 {
-                        let to_mask = generate_bitboard_with_one_piece(to);
-                        if allay_bits.0 & to_mask.0 != 0 {
+                        let to_mask = 1u64 << (to);
+                        if allay_bits.0 & to_mask != 0 {
                             break;
                         }
-                        add(from, to, (enemy_bits.0 & to_mask.0) != 0);
-                        if self.get_all_bits().0 & to_mask.0 != 0 {
+                        add(from, to, (enemy_bits.0 & to_mask) != 0);
+                        if all_bits & to_mask != 0 {
                             break;
                         };
                         if to > 0 {
@@ -462,6 +463,7 @@ mod chess {
         pub fn generate_bishop_moves(&self , moves: &mut Vec<Move>) {
             let allay_bits = &self.get_allay_pieces();
             let enemy_bits = &self.get_enemy_pieces();
+            let all_bits = &self.get_all_bits().0;
 
             let mut add = |from: u64, to: u64, capture: bool| {
                 moves.push(Move::new(from.into(), to.into(), capture));
@@ -475,12 +477,12 @@ mod chess {
                 // North East
                 let mut to = from + 9;
                 while to <= 63 && to % 8 != 0 {
-                    let to_mask = generate_bitboard_with_one_piece(to);
-                    if allay_bits.0 & to_mask.0 != 0 {
+                    let to_mask = 1u64 << (to);
+                    if allay_bits.0 & to_mask != 0 {
                         break;
                     }
-                    add(from, to, (enemy_bits.0 & to_mask.0) != 0);
-                    if self.get_all_bits().0 & to_mask.0 != 0 {
+                    add(from, to, (enemy_bits.0 & to_mask) != 0);
+                    if all_bits & to_mask != 0 {
                         break;
                     };
                     to += 9;
@@ -488,12 +490,12 @@ mod chess {
                 // North West
                 let mut to = from + 7;
                 while to <= 63 && to % 8 != 7 {
-                    let to_mask = generate_bitboard_with_one_piece(to);
-                    if allay_bits.0 & to_mask.0 != 0 {
+                    let to_mask = 1u64 << (to);
+                    if allay_bits.0 & to_mask != 0 {
                         break;
                     }
-                    add(from, to, (enemy_bits.0 & to_mask.0) != 0);
-                    if self.get_all_bits().0 & to_mask.0 != 0 {
+                    add(from, to, (enemy_bits.0 & to_mask) != 0);
+                    if all_bits & to_mask != 0 {
                         break;
                     };
                     to += 7;
@@ -501,12 +503,12 @@ mod chess {
                 // South East
                 let mut to = from - 7;
                 while to % 8 != 0 {
-                    let to_mask = generate_bitboard_with_one_piece(to);
-                    if allay_bits.0 & to_mask.0 != 0 {
+                    let to_mask = 1u64 << (to);
+                    if allay_bits.0 & to_mask != 0 {
                         break;
                     }
-                    add(from, to, (enemy_bits.0 & to_mask.0) != 0);
-                    if self.get_all_bits().0 & to_mask.0 != 0 {
+                    add(from, to, (enemy_bits.0 & to_mask) != 0);
+                    if all_bits & to_mask != 0 {
                         break;
                     };
                     if to > 7 {
@@ -518,12 +520,12 @@ mod chess {
                 // South West
                 let mut to = from - 9;
                 while to > 0 && to % 8 != 7 {
-                    let to_mask = generate_bitboard_with_one_piece(to);
-                    if allay_bits.0 & to_mask.0 != 0 {
+                    let to_mask = 1u64 << (to);
+                    if allay_bits.0 & to_mask != 0 {
                         break;
                     }
-                    add(from, to, (enemy_bits.0 & to_mask.0) != 0);
-                    if self.get_all_bits().0 & to_mask.0 != 0 {
+                    add(from, to, (enemy_bits.0 & to_mask) != 0);
+                    if all_bits & to_mask != 0 {
                         break;
                     };
                     if to > 9 {
@@ -555,12 +557,12 @@ mod chess {
                 // North East
                 let mut to = from + 9;
                 while to <= 63 && to % 8 != 0 {
-                    let to_mask = generate_bitboard_with_one_piece(to);
-                    if allay_bits.0 & to_mask.0 != 0 {
+                    let to_mask = 1u64 << (to);
+                    if allay_bits.0 & to_mask != 0 {
                         break;
                     }
-                    add(from, to, (enemy_bits.0 & to_mask.0) != 0);
-                    if self.get_all_bits().0 & to_mask.0 != 0 {
+                    add(from, to, (enemy_bits.0 & to_mask) != 0);
+                    if occupied & to_mask != 0 {
                         break;
                     };
                     to += 9;
@@ -568,12 +570,12 @@ mod chess {
                 // North West
                 let mut to = from + 7;
                 while to <= 63 && to % 8 != 7 {
-                    let to_mask = generate_bitboard_with_one_piece(to);
-                    if allay_bits.0 & to_mask.0 != 0 {
+                    let to_mask = 1u64 << (to);
+                    if allay_bits.0 & to_mask != 0 {
                         break;
                     }
-                    add(from, to, (enemy_bits.0 & to_mask.0) != 0);
-                    if self.get_all_bits().0 & to_mask.0 != 0 {
+                    add(from, to, (enemy_bits.0 & to_mask) != 0);
+                    if occupied & to_mask != 0 {
                         break;
                     };
                     to += 7;
@@ -582,12 +584,12 @@ mod chess {
                 if from >= 7 {
                     let mut to = from - 7;
                     while to % 8 != 0 {
-                        let to_mask = generate_bitboard_with_one_piece(to);
-                        if allay_bits.0 & to_mask.0 != 0 {
+                        let to_mask = 1u64 << (to);
+                        if allay_bits.0 & to_mask != 0 {
                             break;
                         }
-                        add(from, to, (enemy_bits.0 & to_mask.0) != 0);
-                        if self.get_all_bits().0 & to_mask.0 != 0 {
+                        add(from, to, (enemy_bits.0 & to_mask) != 0);
+                        if occupied & to_mask != 0 {
                             break;
                         };
                         if to > 7 {
@@ -601,12 +603,12 @@ mod chess {
                 if from >= 9 {
                     let mut to = from - 9;
                     while to > 0 && to % 8 != 7 {
-                        let to_mask = generate_bitboard_with_one_piece(to);
-                        if allay_bits.0 & to_mask.0 != 0 {
+                        let to_mask = 1u64 << (to);
+                        if allay_bits.0 & to_mask != 0 {
                             break;
                         }
-                        add(from, to, (enemy_bits.0 & to_mask.0) != 0);
-                        if self.get_all_bits().0 & to_mask.0 != 0 {
+                        add(from, to, (enemy_bits.0 & to_mask) != 0);
+                        if occupied & to_mask != 0 {
                             break;
                         };
                         if to > 9 {
@@ -621,12 +623,12 @@ mod chess {
                 // North
                 if from < 56 {
                     for to in ((from + 8)..=63).step_by(8) {
-                        let to_mask = generate_bitboard_with_one_piece(to);
-                        if allay_bits.0 & to_mask.0 != 0 {
+                        let to_mask = 1u64 << (to);
+                        if allay_bits.0 & to_mask != 0 {
                             break;
                         }
-                        add(from, to, (enemy_bits.0 & to_mask.0) != 0);
-                        if self.get_all_bits().0 & to_mask.0 != 0 {
+                        add(from, to, (enemy_bits.0 & to_mask) != 0);
+                        if occupied & to_mask != 0 {
                             break;
                         };
                     }
@@ -634,12 +636,12 @@ mod chess {
                 // South
                 if from > 7 {
                     for to in (0..=(from - 8)).rev().step_by(8) {
-                        let to_mask = generate_bitboard_with_one_piece(to);
-                        if allay_bits.0 & to_mask.0 != 0 {
+                        let to_mask = 1u64 << (to);
+                        if allay_bits.0 & to_mask != 0 {
                             break;
                         }
-                        add(from, to, (enemy_bits.0 & to_mask.0) != 0);
-                        if self.get_all_bits().0 & to_mask.0 != 0 {
+                        add(from, to, (enemy_bits.0 & to_mask) != 0);
+                        if occupied & to_mask != 0 {
                             break;
                         };
                     }
@@ -649,12 +651,12 @@ mod chess {
                 if from % 8 != 7 {
                     let mut to = from + 1;
                     while to < 64 && to % 8 != 0 {
-                        let to_mask = generate_bitboard_with_one_piece(to);
-                        if allay_bits.0 & to_mask.0 != 0 {
+                        let to_mask = 1u64 << (to);
+                        if allay_bits.0 & to_mask != 0 {
                             break;
                         }
-                        add(from, to, (enemy_bits.0 & to_mask.0) != 0);
-                        if self.get_all_bits().0 & to_mask.0 != 0 {
+                        add(from, to, (enemy_bits.0 & to_mask) != 0);
+                        if occupied & to_mask != 0 {
                             break;
                         };
                         to += 1;
@@ -665,12 +667,12 @@ mod chess {
                 if from % 8 != 0 {
                     let mut to = from - 1;
                     loop {
-                        let to_mask = generate_bitboard_with_one_piece(to);
-                        if allay_bits.0 & to_mask.0 != 0 {
+                        let to_mask = 1u64 << (to);
+                        if allay_bits.0 & to_mask != 0 {
                             break;
                         }
-                        add(from, to, (enemy_bits.0 & to_mask.0) != 0);
-                        if self.get_all_bits().0 & to_mask.0 != 0 {
+                        add(from, to, (enemy_bits.0 & to_mask) != 0);
+                        if occupied & to_mask != 0 {
                             break;
                         }
                         if to % 8 == 0 {
@@ -708,12 +710,12 @@ mod chess {
                 let to_file = to / 8;
                 if (((from as i32) - to) as i64).abs() > 1 { continue; };
 
-                let to_mask = generate_bitboard_with_one_piece(to as u64);
+                let to_mask = 1u64 << (to as u64);
 
-                if allay_bits.0 & to_mask.0 != 0 {
+                if allay_bits.0 & to_mask != 0 {
                     continue;
                 }
-                add(from , to as u64 , (enemy_bits.0 & to_mask.0) != 0);
+                add(from , to as u64 , (enemy_bits.0 & to_mask) != 0);
             }
 
         }
@@ -736,6 +738,7 @@ mod chess {
 
     }
 
+    #[inline]
     fn generate_bitboard_with_one_piece(index: u64) -> BitBoard {
         return BitBoard(1u64 << index);
     }

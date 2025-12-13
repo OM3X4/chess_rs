@@ -280,8 +280,8 @@ mod chess {
             };
         }
 
-        pub fn generate_knight_moves(&self) -> Vec<Move> {
-            let mut moves = Vec::new();
+        pub fn generate_knight_moves(&self , moves: &mut Vec<Move>) {
+            // let mut moves = Vec::new();
             let knight_squares = match self.turn {
                 Turn::WHITE => extract_bits(&self.bitboards.white_knights),
                 Turn::BLACK => extract_bits(&self.bitboards.black_knights),
@@ -300,11 +300,9 @@ mod chess {
                     moves.push(Move::new(from.into(), to.into(), capture));
                 }
             }
-            return moves;
         }
 
-        pub fn generate_white_pawns_moves(&self) -> Vec<Move> {
-            let mut moves = Vec::new();
+        pub fn generate_white_pawns_moves(&self , moves: &mut Vec<Move>) {
             let blockers = self.get_all_white_bits().0 | self.get_all_black_bits().0;
             let pawn_squares = &self.bitboards.white_pawns;
 
@@ -342,11 +340,9 @@ mod chess {
                     add(from.into(), from + 9, true);
                 }
             }
-            return moves;
         }
 
-        pub fn generate_black_pawns_moves(&self) -> Vec<Move> {
-            let mut moves = Vec::new();
+        pub fn generate_black_pawns_moves(&self , moves: &mut Vec<Move>) {
             let blockers = self.get_all_white_bits().0 | self.get_all_black_bits().0;
             let pawn_squares = &self.bitboards.black_pawns;
 
@@ -384,11 +380,9 @@ mod chess {
                     add(from.into(), from - 9, true);
                 }
             }
-            return moves;
         }
 
-        pub fn generate_rook_moves(&self) -> Vec<Move> {
-            let mut moves = Vec::new();
+        pub fn generate_rook_moves(&self , moves: &mut Vec<Move>) {
             let allay_bits = &self.get_allay_pieces();
             let enemy_bits = &self.get_enemy_pieces();
 
@@ -463,11 +457,9 @@ mod chess {
                     }
                 }
             }
-            return moves;
         }
 
-        pub fn generate_bishop_moves(&self) -> Vec<Move> {
-            let mut moves = Vec::new();
+        pub fn generate_bishop_moves(&self , moves: &mut Vec<Move>) {
             let allay_bits = &self.get_allay_pieces();
             let enemy_bits = &self.get_enemy_pieces();
 
@@ -542,11 +534,9 @@ mod chess {
                 }
             }
 
-            return moves;
         }
 
-        pub fn generate_queen_moves(&self) -> Vec<Move> {
-            let mut moves = Vec::new();
+        pub fn generate_queen_moves(&self , moves: &mut Vec<Move>) {
             let allay_bits = &self.get_allay_pieces();
             let enemy_bits = &self.get_enemy_pieces();
             let occupied = self.get_all_bits().0;
@@ -691,11 +681,9 @@ mod chess {
                 }
             }
 
-            return moves;
         }
 
-        pub fn generate_king_moves(&self) -> Vec<Move> {
-            let mut moves: Vec<Move> = Vec::new();
+        pub fn generate_king_moves(&self , moves: &mut Vec<Move>) {
 
             let offsets: [i32; 8] = [8, -8, 1, -1, 9, 7, -7, -9];
 
@@ -728,20 +716,21 @@ mod chess {
                 add(from , to as u64 , (enemy_bits.0 & to_mask.0) != 0);
             }
 
-            return moves;
         }
 
         pub fn generate_moves(&self) -> Vec<Move> {
             let mut moves: Vec<Move> = Vec::new();
-            moves.extend(self.generate_knight_moves());
-            moves.extend(self.generate_bishop_moves());
-            moves.extend(self.generate_rook_moves());
-            moves.extend(self.generate_queen_moves());
-            moves.extend(self.generate_king_moves());
-            moves.extend(match self.turn {
-                Turn::WHITE => self.generate_white_pawns_moves(),
-                Turn::BLACK => self.generate_black_pawns_moves(),
-            });
+            self.generate_knight_moves(&mut moves);
+            self.generate_bishop_moves(&mut moves);
+            self.generate_rook_moves(&mut moves);
+            self.generate_queen_moves(&mut moves);
+            self.generate_king_moves(&mut moves);
+            self.generate_knight_moves(&mut moves);
+
+            match self.turn {
+                Turn::WHITE => self.generate_white_pawns_moves(&mut moves),
+                Turn::BLACK => self.generate_black_pawns_moves(&mut moves),
+            };
             moves
         }
 
@@ -775,7 +764,7 @@ mod test {
         let start = std::time::Instant::now();
         board.load_from_fen("r2q1rk1/pp1b1ppp/2np1n2/2p1p3/2P1P3/2NP1N2/PP1B1PPP/R2Q1RK1 w");
         let mut count = 0;
-        for _ in 0..9_000_000 {
+        for _ in 0..1_000_000 {
             let _ = board.generate_moves();
             count += 1;
         }

@@ -69,6 +69,72 @@ pub mod chess {
         0x0010a00000000000,
         0x0020400000000000,
     ];
+    pub const KING_ATTACK_TABLE: [u64; 64] = [
+        0x0000000000000302,
+        0x0000000000000705,
+        0x0000000000000e0a,
+        0x0000000000001c14,
+        0x0000000000003828,
+        0x0000000000007050,
+        0x000000000000e0a0,
+        0x000000000000c040,
+        0x0000000000030203,
+        0x0000000000070507,
+        0x00000000000e0a0e,
+        0x00000000001c141c,
+        0x0000000000382838,
+        0x0000000000705070,
+        0x0000000000e0a0e0,
+        0x0000000000c040c0,
+        0x0000000003020300,
+        0x0000000007050700,
+        0x000000000e0a0e00,
+        0x000000001c141c00,
+        0x0000000038283800,
+        0x0000000070507000,
+        0x00000000e0a0e000,
+        0x00000000c040c000,
+        0x0000000302030000,
+        0x0000000705070000,
+        0x0000000e0a0e0000,
+        0x0000001c141c0000,
+        0x0000003828380000,
+        0x0000007050700000,
+        0x000000e0a0e00000,
+        0x000000c040c00000,
+        0x0000030203000000,
+        0x0000070507000000,
+        0x00000e0a0e000000,
+        0x00001c141c000000,
+        0x0000382838000000,
+        0x0000705070000000,
+        0x0000e0a0e0000000,
+        0x0000c040c0000000,
+        0x0003020300000000,
+        0x0007050700000000,
+        0x000e0a0e00000000,
+        0x001c141c00000000,
+        0x0038283800000000,
+        0x0070507000000000,
+        0x00e0a0e000000000,
+        0x00c040c000000000,
+        0x0302030000000000,
+        0x0705070000000000,
+        0x0e0a0e0000000000,
+        0x1c141c0000000000,
+        0x3828380000000000,
+        0x7050700000000000,
+        0xe0a0e00000000000,
+        0xc040c00000000000,
+        0x0203000000000000,
+        0x0507000000000000,
+        0x0a0e000000000000,
+        0x141c000000000000,
+        0x2838000000000000,
+        0x5070000000000000,
+        0xa0e0000000000000,
+        0x40c0000000000000,
+    ];
 
     const RANK_4: u64 = 0x00000000FF000000;
     const RANK_5: u64 = 0x000000FF00000000;
@@ -127,7 +193,7 @@ pub mod chess {
         }
     }
 
-    #[derive(Copy, Clone , Debug)]
+    #[derive(Copy, Clone, Debug)]
     struct BitBoard(u64);
 
     #[derive(Debug)]
@@ -136,7 +202,7 @@ pub mod chess {
         BLACK,
     }
 
-    #[derive(Debug , Copy , Clone)]
+    #[derive(Debug, Copy, Clone)]
     struct BitBoards {
         // white
         white_pawns: BitBoard,
@@ -201,12 +267,11 @@ pub mod chess {
         bitboards: BitBoards,
         undo: Option<Move>,
         turn: Turn,
-        occupied: BitBoard
+        occupied: BitBoard,
     }
 
     impl Board {
         pub fn new() -> Board {
-
             return Board {
                 bitboards: BitBoards::default(),
                 undo: None,
@@ -259,7 +324,7 @@ pub mod chess {
                     | self.bitboards.black_queens.0
                     | self.bitboards.black_king.0,
             );
-        }//
+        } //
 
         pub fn load_from_fen(&mut self, fen: &str) {
             self.reset_to_zero();
@@ -303,7 +368,7 @@ pub mod chess {
                         }
                     }
                 }
-            };
+            }
 
             self.occupied = self.get_all_bits();
         } //
@@ -386,12 +451,12 @@ pub mod chess {
             };
         }
 
-        pub fn switch_turn(&mut self){
+        pub fn switch_turn(&mut self) {
             self.turn = match self.turn {
                 Turn::BLACK => Turn::WHITE,
-                Turn::WHITE => Turn::BLACK
+                Turn::WHITE => Turn::BLACK,
             }
-        }//
+        } //
 
         pub fn generate_knight_moves(&self, moves: &mut Vec<Move>) {
             // let mut moves = Vec::new();
@@ -415,7 +480,28 @@ pub mod chess {
                     moves.push(Move::new(from.into(), to.into(), capture, piece_type, None));
                 }
             }
-        }//
+        } //
+
+        pub fn generate_king_moves(&self, moves: &mut Vec<Move>) {
+            // let mut moves = Vec::new();
+            let enemy_bits = self.get_enemy_pieces().0;
+            let allay_bits = self.get_allay_pieces().0;
+
+            let (king, piece_type) = match self.turn {
+                Turn::WHITE => (self.bitboards.white_king.0, PieceType::WhiteKing),
+                Turn::BLACK => (self.bitboards.black_king.0, PieceType::BlackKing),
+            };
+
+            let from = king.trailing_zeros() as u64;
+            let mut attacks = KNIGHTS_ATTACK_TABLE.get(from as usize).unwrap() & !allay_bits;
+
+            while attacks != 0 {
+                let to = attacks.trailing_zeros() as u64;
+                attacks &= attacks - 1;
+                let capture = (enemy_bits & to) != 0;
+                moves.push(Move::new(from.into(), to.into(), capture, piece_type, None));
+            }
+        } //
 
         pub fn generate_white_pawns_moves(&self, moves: &mut Vec<Move>) {
             let blockers = self.get_all_white_bits().0 | self.get_all_black_bits().0;
@@ -513,7 +599,7 @@ pub mod chess {
                     add(from.into(), from - 9, true);
                 }
             }
-        }//
+        } //
 
         pub fn generate_rook_moves(&self, moves: &mut Vec<Move>) {
             let allay_bits = &self.get_allay_pieces();
@@ -913,42 +999,42 @@ pub mod chess {
             }
         } //
 
-        pub fn generate_king_moves(&self, moves: &mut Vec<Move>) {
-            let offsets: [i32; 8] = [8, -8, 1, -1, 9, 7, -7, -9];
+        // pub fn generate_king_moves(&self, moves: &mut Vec<Move>) {
+        //     let offsets: [i32; 8] = [8, -8, 1, -1, 9, 7, -7, -9];
 
-            let allay_bits = &self.get_allay_pieces();
-            let enemy_bits = &self.get_enemy_pieces();
-            let occupied = self.occupied.0;
+        //     let allay_bits = &self.get_allay_pieces();
+        //     let enemy_bits = &self.get_enemy_pieces();
+        //     let occupied = self.occupied.0;
 
-            let (king_bits, piece_type) = match self.turn {
-                Turn::WHITE => (&self.bitboards.white_king, PieceType::WhiteKing),
-                Turn::BLACK => (&self.bitboards.black_king, PieceType::BlackKing),
-            };
+        //     let (king_bits, piece_type) = match self.turn {
+        //         Turn::WHITE => (&self.bitboards.white_king, PieceType::WhiteKing),
+        //         Turn::BLACK => (&self.bitboards.black_king, PieceType::BlackKing),
+        //     };
 
-            let mut add = |from: u64, to: u64, capture: bool| {
-                moves.push(Move::new(from.into(), to.into(), capture, piece_type, None));
-            };
+        //     let mut add = |from: u64, to: u64, capture: bool| {
+        //         moves.push(Move::new(from.into(), to.into(), capture, piece_type, None));
+        //     };
 
-            let from = king_bits.0.trailing_zeros() as u64;
-            for offset in offsets {
-                let to = (from as i32) + offset;
-                if to < 0 || to > 63 {
-                    continue;
-                };
-                let from_file = from % 8;
-                let to_file = to % 8;
-                if (((from as i32) - to) as i64).abs() > 1 {
-                    continue;
-                };
+        //     let from = king_bits.0.trailing_zeros() as u64;
+        //     for offset in offsets {
+        //         let to = (from as i32) + offset;
+        //         if to < 0 || to > 63 {
+        //             continue;
+        //         };
+        //         let from_file = from % 8;
+        //         let to_file = to % 8;
+        //         if (((from as i32) - to) as i64).abs() > 1 {
+        //             continue;
+        //         };
 
-                let to_mask = 1u64 << (to as u64);
+        //         let to_mask = 1u64 << (to as u64);
 
-                if allay_bits.0 & to_mask != 0 {
-                    continue;
-                }
-                add(from, to as u64, (enemy_bits.0 & to_mask) != 0);
-            }
-        } //
+        //         if allay_bits.0 & to_mask != 0 {
+        //             continue;
+        //         }
+        //         add(from, to as u64, (enemy_bits.0 & to_mask) != 0);
+        //     }
+        // } //
 
         pub fn generate_king_moves_by_square(&self, square: u64) -> u64 {
             let mut attacks = 0u64;
@@ -1112,6 +1198,9 @@ pub mod chess {
 
             let is_attacked_by_knights =
                 (KNIGHTS_ATTACK_TABLE.get(king_square as usize).unwrap() & enemy_knights) != 0;
+
+            let is_attacked_by_king =
+                (KING_ATTACK_TABLE.get(king_square as usize).unwrap() & enemy_knights) != 0;
 
             if is_attacked_by_knights {
                 return true;

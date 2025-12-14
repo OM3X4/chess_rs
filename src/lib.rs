@@ -703,7 +703,7 @@ pub mod chess {
             };
 
             let from = king.trailing_zeros() as u64;
-            let mut attacks = KNIGHTS_ATTACK_TABLE.get(from as usize).unwrap() & !allay_bits;
+            let mut attacks = KING_ATTACK_TABLE.get(from as usize).unwrap() & !allay_bits;
 
             while attacks != 0 {
                 let to = attacks.trailing_zeros() as u64;

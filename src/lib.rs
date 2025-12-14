@@ -289,82 +289,51 @@ pub mod chess {
         0x0000000000000000,
     ];
 
-    /// For each square:
-    /// rank ∪ file ∪ diagonals (excluding the square itself)
-    pub const SQUARE_RAYS: [u64; 64] = [
-        /* A1 */ 0x81412111090503FE,
-        /* B1 */ 0x02824222120A07FD,
-        /* C1 */ 0x0404844424150EFB,
-        /* D1 */ 0x08080888492A1CF7,
-        /* E1 */ 0x10101011925438EF,
-        /* F1 */ 0x2020212224A870DF,
-        /* G1 */ 0x404142444850E0BF,
-        /* H1 */ 0x8182848890A0C07F,
-        /* A2 */ 0x412111090503FE01,
-        /* B2 */ 0x824222120A07FD02,
-        /* C2 */ 0x04844424150EFB04,
-        /* D2 */ 0x080888492A1CF708,
-        /* E2 */ 0x101011925438EF10,
-        /* F2 */ 0x20212224A870DF20,
-        /* G2 */ 0x4142444850E0BF40,
-        /* H2 */ 0x82848890A0C07F80,
-        /* A3 */ 0x2111090503FE0101,
-        /* B3 */ 0x4222120A07FD0202,
-        /* C3 */ 0x844424150EFB0404,
-        /* D3 */ 0x0888492A1CF70808,
-        /* E3 */ 0x1011925438EF1010,
-        /* F3 */ 0x212224A870DF2020,
-        /* G3 */ 0x42444850E0BF4040,
-        /* H3 */ 0x848890A0C07F8080,
-        /* A4 */ 0x11090503FE010101,
-        /* B4 */ 0x22120A07FD020202,
-        /* C4 */ 0x4424150EFB040404,
-        /* D4 */ 0x88492A1CF7080808,
-        /* E4 */ 0x11925438EF101010,
-        /* F4 */ 0x2224A870DF202020,
-        /* G4 */ 0x444850E0BF404040,
-        /* H4 */ 0x8890A0C07F808080,
-        /* A5 */ 0x090503FE01010101,
-        /* B5 */ 0x120A07FD02020202,
-        /* C5 */ 0x24150EFB04040404,
-        /* D5 */ 0x492A1CF708080808,
-        /* E5 */ 0x925438EF10101010,
-        /* F5 */ 0x24A870DF20202020,
-        /* G5 */ 0x4850E0BF40404040,
-        /* H5 */ 0x90A0C07F80808080,
-        /* A6 */ 0x0503FE0101010101,
-        /* B6 */ 0x0A07FD0202020202,
-        /* C6 */ 0x150EFB0404040404,
-        /* D6 */ 0x2A1CF70808080808,
-        /* E6 */ 0x5438EF1010101010,
-        /* F6 */ 0xA870DF2020202020,
-        /* G6 */ 0x50E0BF4040404040,
-        /* H6 */ 0xA0C07F8080808080,
-        /* A7 */ 0x03FE010101010101,
-        /* B7 */ 0x07FD020202020202,
-        /* C7 */ 0x0EFB040404040404,
-        /* D7 */ 0x1CF7080808080808,
-        /* E7 */ 0x38EF101010101010,
-        /* F7 */ 0x70DF202020202020,
-        /* G7 */ 0xE0BF404040404040,
-        /* H7 */ 0xC07F808080808080,
-        /* A8 */ 0xFE01010101010101,
-        /* B8 */ 0xFD02020202020202,
-        /* C8 */ 0xFB04040404040404,
-        /* D8 */ 0xF708080808080808,
-        /* E8 */ 0xEF10101010101010,
-        /* F8 */ 0xDF20202020202020,
-        /* G8 */ 0xBF40404040404040,
-        /* H8 */ 0x7F80808080808080,
-    ];
-    pub const SQUARE_RAYS_WITH_SELF: [u64; 64] = {
-        let mut arr = [0u64; 64];
+    const fn get_queen_rays_inclusive(sq: usize) -> u64 {
+        // Start with the bit for the square itself set to 1
+        let mut attacks = 1u64 << sq;
+
+        let r = (sq / 8) as i8;
+        let f = (sq % 8) as i8;
+
+        // Directions: (rank_change, file_change)
+        // N, S, E, W, NE, NW, SE, SW
+        let directions = [
+            (1, 0),
+            (-1, 0),
+            (0, 1),
+            (0, -1),
+            (1, 1),
+            (1, -1),
+            (-1, 1),
+            (-1, -1),
+        ];
+
         let mut i = 0;
-        while i < 64 {
-            arr[i] = SQUARE_RAYS[i] | (1u64 << i);
+        while i < 8 {
+            let (dr, df) = directions[i];
+            let mut n_r = r + dr;
+            let mut n_f = f + df;
+
+            while n_r >= 0 && n_r < 8 && n_f >= 0 && n_f < 8 {
+                attacks |= 1 << (n_r * 8 + n_f);
+                n_r += dr;
+                n_f += df;
+            }
             i += 1;
         }
-        arr
+        attacks
+    }
+
+    // This computes the array at compile time
+    pub const SQUARE_RAYS: [u64; 64] = {
+        let mut table = [0; 64];
+        let mut i = 0;
+        while i < 64 {
+            table[i] = get_queen_rays_inclusive(i);
+            i += 1;
+        }
+        table
     };
 
     const RANK_4: u64 = 0x00000000FF000000;
@@ -1398,20 +1367,21 @@ pub mod chess {
             let is_king_in_check_now = self.is_king_in_check(self.turn);
 
             for mv in pesudo_moves {
-                // if !is_king_in_check_now {
-                //     if (1u64 << mv.from) & SQUARE_RAYS[king_bb.trailing_zeros() as usize] == 0
-                //         && mv.piece_type != king_type
-                //     {
-                //         legal_moves.push(mv);
-                //         continue;
-                //     }
-                // } else {
-                //     if (1u64 << mv.to) & SQUARE_RAYS[king_bb.trailing_zeros() as usize] == 0
-                //         && mv.piece_type != king_type
-                //     {
-                //         continue;
-                //     }
-                // }
+                if !is_king_in_check_now {
+                    if ((1u64 << mv.from) & SQUARE_RAYS[king_bb.trailing_zeros() as usize]) == 0
+                        && mv.piece_type != king_type
+                    {
+
+                        legal_moves.push(mv);
+                        continue;
+                    }
+                } else {
+                    if (1u64 << mv.to) & SQUARE_RAYS[king_bb.trailing_zeros() as usize] == 0
+                        && mv.piece_type != king_type
+                    {
+                        continue;
+                    }
+                }
 
                 let old_bitboards = self.bitboards;
                 self.make_move(mv);
@@ -1769,7 +1739,7 @@ mod test {
         // board.load_from_fen("1nk2bnr/4p3/r2qNp2/p6p/pP1pP1pP/3R1N2/1BPP1PP1/3QK1R1 w");
         // board.load_from_fen("2kr1bnB/pppN4/6p1/1N3p2/1np2P1r/P3Q3/4P1PP/1bK2BR1 w");
         // board.load_from_fen("r4bnr/p2k4/Bpnp1p2/2p1p1pp/4PqP1/3PBP1P/PPP5/RNK2QNR w");
-        board.load_from_fen("r1b2b1r/2p1q1k1/n1n1pppp/1P1p4/pP3P1P/2NPP1P1/R1P1N1K1/2B1Q2R w");
+        board.load_from_fen("rnbqk2r/ppppnp1p/6p1/bB2p1Q1/4P3/1P3P2/P1PP2PP/R1B2KNR b");
         // println!(
         //     "is king in check: {:#?}",
         //     board.is_king_in_check(Turn::WHITE)

@@ -54,38 +54,40 @@ def reference_moves(board: chess.Board):
         ref.append((m.from_square, m.to_square))
 
     return ref
+counter = 0
+while True:
+    fen = safe_random_fen()
+    # fen = "rnb2b1r/pp2kp2/6p1/2p1p1Pp/2P1n3/2QPB2B/qP2KP1P/RN4NR b - - 2 13"
+    # fen = "1rb3kr/p2p4/np6/2p1qppp/5PnP/PPPp4/1B2P1KR/RN3BN1 w - - 0 21"
+    minimal_fen = fen.split(" ")[0:2]
+    print("Random FEN:")
+    print(fen)
 
+    board = chess.Board(fen)
 
-fen = safe_random_fen()
-# fen = "rnb2b1r/pp2kp2/6p1/2p1p1Pp/2P1n3/2QPB2B/qP2KP1P/RN4NR b - - 2 13"
-fen = "1rb3kr/p2p4/np6/2p1qppp/5PnP/PPPp4/1B2P1KR/RN3BN1 w - - 0 21"
-minimal_fen = fen.split(" ")[0:2]
-print("Random FEN:")
-print(fen)
+    moves = set(reference_moves(board))
 
-board = chess.Board(fen)
+    # print(f"\nLegal moves count: {len(moves)}")
+    # for move in moves:
+    #     print(move.from_square , move.to_square)
 
-moves = set(reference_moves(board))
+    p = subprocess.Popen(
+        ["C:/Learn/LearnRust/chess/target/release/chess.exe"],
+        stdin=subprocess.PIPE,
+        stdout=subprocess.PIPE,
+        text=True
+    )
 
-# print(f"\nLegal moves count: {len(moves)}")
-# for move in moves:
-#     print(move.from_square , move.to_square)
+    out, _ = p.communicate(minimal_fen[0] + " " + minimal_fen[1])
+    rust_moves = set(tuple(map(int, line.split())) for line in out.splitlines())
 
-p = subprocess.Popen(
-    ["C:/Learn/LearnRust/chess/target/release/chess.exe"],
-    stdin=subprocess.PIPE,
-    stdout=subprocess.PIPE,
-    text=True
-)
-
-out, _ = p.communicate(minimal_fen[0] + " " + minimal_fen[1])
-rust_moves = set(tuple(map(int, line.split())) for line in out.splitlines())
-
-if moves != rust_moves:
-    print("FEN:", fen)
-    print("Missing:", moves - rust_moves)
-    print("Extra:", rust_moves - moves)
-    exit(1)
+    if moves != rust_moves:
+        print("Counter:", counter)
+        print("FEN:", fen)
+        print("Missing:", moves - rust_moves)
+        print("Extra:", rust_moves - moves)
+        exit(1)
+    counter += 1
 
 # stockfish = Stockfish(
 #     path=r"C:/Program Files/stockfish/stockfish-windows-x86-64-avx2.exe",

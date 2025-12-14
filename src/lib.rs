@@ -995,38 +995,44 @@ pub mod chess {
                     };
                     to += 7;
                 }
+
                 // South East
-                let mut to = from - 7;
-                while to % 8 != 0 {
-                    let to_mask = 1u64 << (to);
-                    if allay_bits.0 & to_mask != 0 {
-                        break;
-                    }
-                    add(from, to, (enemy_bits.0 & to_mask) != 0);
-                    if all_bits & to_mask != 0 {
-                        break;
-                    };
-                    if to > 7 {
-                        to -= 7;
-                    } else {
-                        break;
+                if from >= 7 {
+                    let mut to = from - 7;
+                    while to % 8 != 0 {
+                        let to_mask = 1u64 << (to);
+                        if allay_bits.0 & to_mask != 0 {
+                            break;
+                        }
+                        add(from, to, (enemy_bits.0 & to_mask) != 0);
+                        if all_bits & to_mask != 0 {
+                            break;
+                        };
+                        if to > 7 {
+                            to -= 7;
+                        } else {
+                            break;
+                        }
                     }
                 }
+
                 // South West
-                let mut to = from - 9;
-                while to > 0 && to % 8 != 7 {
-                    let to_mask = 1u64 << (to);
-                    if allay_bits.0 & to_mask != 0 {
-                        break;
-                    }
-                    add(from, to, (enemy_bits.0 & to_mask) != 0);
-                    if all_bits & to_mask != 0 {
-                        break;
-                    };
-                    if to > 9 {
-                        to -= 9;
-                    } else {
-                        break;
+                if from >= 9 {
+                    let mut to = from - 9;
+                    while to > 0 && to % 8 != 7 {
+                        let to_mask = 1u64 << (to);
+                        if allay_bits.0 & to_mask != 0 {
+                            break;
+                        }
+                        add(from, to, (enemy_bits.0 & to_mask) != 0);
+                        if all_bits & to_mask != 0 {
+                            break;
+                        };
+                        if to > 9 {
+                            to -= 9;
+                        } else {
+                            break;
+                        }
                     }
                 }
             }
@@ -1269,7 +1275,6 @@ pub mod chess {
                 all_locations |= bb;
                 if occ & bb != 0 {
                     if sliders & bb != 0 {
-                        println!("checking bishop {sq}");
                         return true;
                     }
                     break;
@@ -1284,7 +1289,6 @@ pub mod chess {
                 all_locations |= bb;
                 if occ & bb != 0 {
                     if sliders & bb != 0 {
-                        println!("checking bishop {sq}");
                         return true;
                     }
                     break;
@@ -1294,14 +1298,11 @@ pub mod chess {
 
             // SE
             let mut sq = k - 7;
-            // println!("initial square from soute east {sq}");
             while sq >= 0 && ((1u64 << sq) & FILE_A) == 0 {
-                // println!("sq from south east {sq}");
                 let bb = 1u64 << sq;
                 all_locations |= bb;
                 if occ & bb != 0 {
                     if sliders & bb != 0 {
-                        println!("checking bishop {sq}");
                         return true;
                     }
                     break;
@@ -1316,7 +1317,6 @@ pub mod chess {
                 all_locations |= bb;
                 if occ & bb != 0 {
                     if sliders & bb != 0 {
-                        println!("checking bishop {sq}");
                         return true;
                     }
                     break;
@@ -1324,7 +1324,6 @@ pub mod chess {
                 sq -= 9;
             }
 
-            // println!("all locations {:#?}", extract_bits(&BitBoard(all_locations)));
 
             all_locations & sliders != 0
         }
@@ -1334,11 +1333,6 @@ pub mod chess {
             let occ = self.occupied.0;
             let k = king_bb.trailing_zeros() as i32;
             let rank = k & 56;
-
-            // println!(
-            //     "rook check test: occ={:#x}, sliders={:#x}, king={}",
-            //     occ, sliders, k
-            // );
 
             // North / South
             let mut sq = k + 8;
@@ -1787,17 +1781,13 @@ mod test {
     fn move_generation() {
         let mut board = Board::new();
         // board.load_from_fen("rnb2b1r/pp2kp2/6p1/2p1p1Pp/2P1n3/2QPB2B/qP2KP1P/RN4NR b");
-        board.load_from_fen("1rb3kr/p2p4/np6/2p1qppp/5PnP/PPPp3K/1B2P2R/RN3BN1 w");
-        println!(
-            "is king in check: {:#?}",
-            board.is_king_in_check(Turn::WHITE)
-        )
-
-        // let king_bb = 1u64 << 53; // f7
-        // let bishops = 1u64 << 26; // c4
-        // assert!(board.is_check_by_bishop(king_bb, bishops));
-        // let moves = board.generate_moves();
-        // println!("{:#?}", moves);
+        board.load_from_fen("1rb3kr/p2p4/np6/2p1qppp/5PnP/PPPp4/1B2P1KR/RN3BN1 w");
+        // println!(
+        //     "is king in check: {:#?}",
+        //     board.is_king_in_check(Turn::WHITE)
+        // )
+        let moves = board.generate_moves();
+        println!("{:#?}", moves);
     }
 
     #[test]

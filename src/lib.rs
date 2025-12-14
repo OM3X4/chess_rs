@@ -764,8 +764,6 @@ pub mod chess {
 
         pub fn generate_black_pawns_moves(&self, moves: &mut Vec<Move>) {
             let blockers = self.get_all_white_bits().0 | self.get_all_black_bits().0;
-            let pawn_squares = &self.bitboards.black_pawns;
-
             let enemy_pieces_bb = self.get_all_white_bits();
 
             let mut add = |from: u64, to: u64, capture: bool| {
@@ -898,57 +896,6 @@ pub mod chess {
                     }
                 }
             }
-        }
-
-        pub fn generate_rook_moves_by_square(&self, from: u64) -> u64 {
-            let mut attacks = 0u64;
-            let occupied = self.occupied.0;
-
-            // north
-            let mut sq = from + 8;
-            while sq < 64 {
-                let bb = 1u64 << sq;
-                attacks |= bb;
-                if occupied & bb != 0 {
-                    break;
-                }
-                sq += 8;
-            }
-
-            // south
-            let mut sq = from as i32 - 8;
-            while sq >= 0 {
-                let bb = 1u64 << sq;
-                attacks |= bb;
-                if occupied & bb != 0 {
-                    break;
-                }
-                sq -= 8;
-            }
-
-            // east
-            let mut sq = from + 1;
-            while sq % 8 != 0 {
-                let bb = 1u64 << sq;
-                attacks |= bb;
-                if occupied & bb != 0 {
-                    break;
-                }
-                sq += 1;
-            }
-
-            // west
-            let mut sq = from as i32 - 1;
-            while sq >= 0 && sq % 8 != 7 {
-                let bb = 1u64 << sq;
-                attacks |= bb;
-                if occupied & bb != 0 {
-                    break;
-                }
-                sq -= 1;
-            }
-
-            attacks
         } //
 
         pub fn generate_bishop_moves(&self, moves: &mut Vec<Move>) {
@@ -971,44 +918,51 @@ pub mod chess {
 
                 // North East
                 let mut to = from + 9;
-                while to <= 63 && to % 8 != 0 {
+                while to <= 63 && ((1u64 << to) & FILE_A) == 0 {
                     let to_mask = 1u64 << (to);
-                    if allay_bits.0 & to_mask != 0 {
-                        break;
-                    }
-                    add(from, to, (enemy_bits.0 & to_mask) != 0);
                     if all_bits & to_mask != 0 {
+                        if allay_bits.0 & to_mask != 0 {
+                            break;
+                        }
+                        add(from, to, true);
                         break;
-                    };
+                    } else {
+                        add(from, to, false);
+                    }
                     to += 9;
                 }
+
                 // North West
                 let mut to = from + 7;
-                while to <= 63 && to % 8 != 7 {
+                while to <= 63 && ((1u64 << to) & FILE_H) == 0 {
                     let to_mask = 1u64 << (to);
-                    if allay_bits.0 & to_mask != 0 {
-                        break;
-                    }
-                    add(from, to, (enemy_bits.0 & to_mask) != 0);
                     if all_bits & to_mask != 0 {
+                        if allay_bits.0 & to_mask != 0 {
+                            break;
+                        }
+                        add(from, to, true);
                         break;
-                    };
+                    } else {
+                        add(from, to, false);
+                    }
                     to += 7;
                 }
 
                 // South East
                 if from >= 7 {
                     let mut to = from - 7;
-                    while to % 8 != 0 {
+                    while ((1u64 << to) & FILE_A) == 0 {
                         let to_mask = 1u64 << (to);
-                        if allay_bits.0 & to_mask != 0 {
-                            break;
-                        }
-                        add(from, to, (enemy_bits.0 & to_mask) != 0);
                         if all_bits & to_mask != 0 {
+                            if allay_bits.0 & to_mask != 0 {
+                                break;
+                            }
+                            add(from, to, true);
                             break;
-                        };
-                        if to > 7 {
+                        } else {
+                            add(from, to, false);
+                        }
+                        if to >= 7 {
                             to -= 7;
                         } else {
                             break;
@@ -1019,16 +973,18 @@ pub mod chess {
                 // South West
                 if from >= 9 {
                     let mut to = from - 9;
-                    while to > 0 && to % 8 != 7 {
+                    while ((1u64 << to) & FILE_H) == 0 {
                         let to_mask = 1u64 << (to);
-                        if allay_bits.0 & to_mask != 0 {
-                            break;
-                        }
-                        add(from, to, (enemy_bits.0 & to_mask) != 0);
                         if all_bits & to_mask != 0 {
+                            if allay_bits.0 & to_mask != 0 {
+                                break;
+                            }
+                            add(from, to, true);
                             break;
-                        };
-                        if to > 9 {
+                        } else {
+                            add(from, to, false);
+                        }
+                        if to >= 9 {
                             to -= 9;
                         } else {
                             break;
@@ -1036,55 +992,6 @@ pub mod chess {
                     }
                 }
             }
-        } //
-        pub fn generate_bishop_moves_by_square(&self, from: u64) -> u64 {
-            let mut attacks = 0u64;
-            let occupied = self.occupied.0;
-            // NE
-            let mut sq = from + 9;
-            while sq < 64 && sq % 8 != 0 {
-                let bb = 1u64 << sq;
-                attacks |= bb;
-                if occupied & bb != 0 {
-                    break;
-                }
-                sq += 9;
-            }
-
-            // NW
-            let mut sq = from + 7;
-            while sq < 64 && sq % 8 != 7 {
-                let bb = 1u64 << sq;
-                attacks |= bb;
-                if occupied & bb != 0 {
-                    break;
-                }
-                sq += 7;
-            }
-
-            // SE
-            let mut sq = from as i32 - 7;
-            while sq >= 0 && sq % 8 != 0 {
-                let bb = 1u64 << sq;
-                attacks |= bb;
-                if occupied & bb != 0 {
-                    break;
-                }
-                sq -= 7;
-            }
-
-            // SW
-            let mut sq = from as i32 - 9;
-            while sq >= 0 && sq % 8 != 7 {
-                let bb = 1u64 << sq;
-                attacks |= bb;
-                if occupied & bb != 0 {
-                    break;
-                }
-                sq -= 9;
-            }
-
-            attacks
         } //
 
         pub fn generate_queen_moves(&self, moves: &mut Vec<Move>) {
@@ -1236,31 +1143,6 @@ pub mod chess {
             }
         } //
 
-        pub fn generate_king_moves_by_square(&self, square: u64) -> u64 {
-            let mut attacks = 0u64;
-            let rank = square / 8;
-            let file = square % 8;
-
-            for (dr, df) in [
-                (1, 0),
-                (-1, 0),
-                (0, 1),
-                (0, -1),
-                (1, 1),
-                (1, -1),
-                (-1, 1),
-                (-1, -1),
-            ] {
-                let r = rank as i32 + dr;
-                let f = file as i32 + df;
-                if r >= 0 && r < 8 && f >= 0 && f < 8 {
-                    attacks |= 1u64 << (r * 8 + f);
-                }
-            }
-
-            attacks
-        } //
-
         #[inline]
         pub fn is_check_by_bishop(&self, king_bb: u64, sliders: u64) -> bool {
             let occ = self.occupied.0;
@@ -1323,7 +1205,6 @@ pub mod chess {
                 }
                 sq -= 9;
             }
-
 
             all_locations & sliders != 0
         }
@@ -1404,7 +1285,6 @@ pub mod chess {
             let mut pesudo_moves: Vec<Move> = Vec::new();
             let mut legal_moves: Vec<Move> = Vec::new();
 
-
             self.generate_pesudo_moves(&mut pesudo_moves);
 
             let king_bb = match self.turn {
@@ -1418,7 +1298,6 @@ pub mod chess {
             };
 
             let is_king_in_check_now = self.is_king_in_check(self.turn);
-
 
             for mv in pesudo_moves {
                 // if !is_king_in_check_now {
@@ -1479,7 +1358,6 @@ pub mod chess {
                 Turn::BLACK => &self.bitboards.white_pawns.0,
                 Turn::WHITE => &self.bitboards.black_pawns.0,
             };
-
 
             let is_attacked_by_knights =
                 (KNIGHTS_ATTACK_TABLE.get(king_square as usize).unwrap() & enemy_knights) != 0;
@@ -1781,7 +1659,8 @@ mod test {
     fn move_generation() {
         let mut board = Board::new();
         // board.load_from_fen("rnb2b1r/pp2kp2/6p1/2p1p1Pp/2P1n3/2QPB2B/qP2KP1P/RN4NR b");
-        board.load_from_fen("1rb3kr/p2p4/np6/2p1qppp/5PnP/PPPp4/1B2P1KR/RN3BN1 w");
+        // board.load_from_fen("1rb3kr/p2p4/np6/2p1qppp/5PnP/PPPp4/1B2P1KR/RN3BN1 w");
+        board.load_from_fen("1nk2bnr/4p3/r2qNp2/p6p/pP1pP1pP/3R1N2/1BPP1PP1/3QK1R1 w");
         // println!(
         //     "is king in check: {:#?}",
         //     board.is_king_in_check(Turn::WHITE)

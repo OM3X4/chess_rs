@@ -823,3 +823,11 @@ export const bishopRaysSW: bigint[] = [
     0x0000070e1c3870e0n, 0x00000e1c3870e0c0n, 0x00001c3870e0c080n, 0x0000383070604000n,
     0x0000700000000000n, 0x0000e00000000000n, 0x0000000000000000n, 0x0000000000000000n,
 ];
+
+const board = new ChessGame3();
+board.loadFEN("r2q1rk1/pp1b1ppp/2np1n2/2p1p3/2P1P3/2NP1N2/PP1B1PPP/R2Q1RK1 w - - 0 1");
+console.time("start");
+for (let i = 0; i < 1000000; i++) {
+    const moves = board.generateMoves();
+}
+console.timeEnd("start");

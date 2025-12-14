@@ -1290,9 +1290,9 @@ pub mod chess {
 
             // SE
             let mut sq = k - 7;
-            println!("initial square from soute east {sq}");
+            // println!("initial square from soute east {sq}");
             while sq >= 0 && ((1u64 << sq) & FILE_A) == 0 {
-                println!("sq from south east {sq}");
+                // println!("sq from south east {sq}");
                 let bb = 1u64 << sq;
                 all_locations |= bb;
                 if occ & bb != 0 {
@@ -1316,7 +1316,7 @@ pub mod chess {
                 sq -= 9;
             }
 
-            println!("all locations {:#?}", extract_bits(&BitBoard(all_locations)));
+            // println!("all locations {:#?}", extract_bits(&BitBoard(all_locations)));
 
             all_locations & sliders != 0
         }
@@ -1477,9 +1477,9 @@ pub mod chess {
                 Turn::WHITE => &self.bitboards.black_pawns.0,
             };
 
-            println!("king bb: {:064b}", king);
-            println!("enemy bishops: {:064b}", enemy_bishops);
-            println!("enemy queens: {:064b}", enemy_queens);
+            // println!("king bb: {:064b}", king);
+            // println!("enemy bishops: {:064b}", enemy_bishops);
+            // println!("enemy queens: {:064b}", enemy_queens);
 
             let is_attacked_by_knights =
                 (KNIGHTS_ATTACK_TABLE.get(king_square as usize).unwrap() & enemy_knights) != 0;

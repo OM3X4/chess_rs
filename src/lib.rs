@@ -1206,7 +1206,8 @@ pub mod chess {
                 sq -= 9;
             }
 
-            all_locations & sliders != 0
+            // all_locations & sliders != 0
+            false
         }
 
         #[inline(always)]
@@ -1317,15 +1318,12 @@ pub mod chess {
 
                 let old_bitboards = self.bitboards;
                 self.make_move(mv);
-                let is_illegal = self.is_king_in_check(match self.turn {
-                    Turn::BLACK => Turn::WHITE,
-                    Turn::WHITE => Turn::BLACK,
-                });
+                self.switch_turn();
+                let is_illegal = self.is_king_in_check(self.turn);
                 if !is_illegal {
                     legal_moves.push(mv);
                 }
                 self.bitboards = old_bitboards;
-                self.switch_turn();
             }
             return legal_moves;
         } //
@@ -1422,7 +1420,35 @@ pub mod chess {
         } //
 
         pub fn make_move(&mut self, mv: Move) {
-            if let Some(piece_type) = &mv.captured_piece {
+
+            let mut captured_piece_type = None;
+            if self.bitboards.white_pawns.0 & (1u64 << mv.to) != 0 {
+                captured_piece_type = Some(PieceType::WhitePawn);
+            } else if self.bitboards.white_knights.0 & (1u64 << mv.to) != 0 {
+                captured_piece_type = Some(PieceType::WhiteKnight);
+            } else if self.bitboards.white_bishops.0 & (1u64 << mv.to) != 0 {
+                captured_piece_type = Some(PieceType::WhiteBishop);
+            } else if self.bitboards.white_rooks.0 & (1u64 << mv.to) != 0 {
+                captured_piece_type = Some(PieceType::WhiteRook);
+            } else if self.bitboards.white_queens.0 & (1u64 << mv.to) != 0 {
+                captured_piece_type = Some(PieceType::WhiteQueen);
+            } else if self.bitboards.white_king.0 & (1u64 << mv.to) != 0 {
+                captured_piece_type = Some(PieceType::WhiteKing);
+            } else if self.bitboards.black_pawns.0 & (1u64 << mv.to) != 0 {
+                captured_piece_type = Some(PieceType::BlackPawn);
+            } else if self.bitboards.black_knights.0 & (1u64 << mv.to) != 0 {
+                captured_piece_type = Some(PieceType::BlackKnight);
+            } else if self.bitboards.black_bishops.0 & (1u64 << mv.to) != 0 {
+                captured_piece_type = Some(PieceType::BlackBishop);
+            } else if self.bitboards.black_rooks.0 & (1u64 << mv.to) != 0 {
+                captured_piece_type = Some(PieceType::BlackRook);
+            } else if self.bitboards.black_queens.0 & (1u64 << mv.to) != 0 {
+                captured_piece_type = Some(PieceType::BlackQueen);
+            } else if self.bitboards.black_king.0 & (1u64 << mv.to) != 0 {
+                captured_piece_type = Some(PieceType::BlackKing);
+            }
+
+            if let Some(piece_type) = captured_piece_type {
                 match piece_type {
                     PieceType::WhitePawn => self.bitboards.white_pawns.0 &= !(1u64 << mv.to),
                     PieceType::WhiteKnight => self.bitboards.white_knights.0 &= !(1u64 << mv.to),
@@ -1660,13 +1686,32 @@ mod test {
         let mut board = Board::new();
         // board.load_from_fen("rnb2b1r/pp2kp2/6p1/2p1p1Pp/2P1n3/2QPB2B/qP2KP1P/RN4NR b");
         // board.load_from_fen("1rb3kr/p2p4/np6/2p1qppp/5PnP/PPPp4/1B2P1KR/RN3BN1 w");
-        board.load_from_fen("1nk2bnr/4p3/r2qNp2/p6p/pP1pP1pP/3R1N2/1BPP1PP1/3QK1R1 w");
+        // board.load_from_fen("1nk2bnr/4p3/r2qNp2/p6p/pP1pP1pP/3R1N2/1BPP1PP1/3QK1R1 w");
+        // board.load_from_fen("2kr1bnB/pppN4/6p1/1N3p2/1np2P1r/P3Q3/4P1PP/1bK2BR1 w");
+        board.load_from_fen("r4bnr/p2k4/Bpnp1p2/2p1p1pp/4PqP1/3PBP1P/PPP5/RNK2QNR w");
         // println!(
         //     "is king in check: {:#?}",
         //     board.is_king_in_check(Turn::WHITE)
         // )
         let moves = board.generate_moves();
         println!("{:#?}", moves);
+    }
+
+    #[test]
+    fn is_king_in_check() {
+        let mut board = Board::new();
+
+        board.load_from_fen("r4bnr/p2k4/Bpnp1p2/2p1p1pp/4PBP1/3P1P1P/PPP5/RNK2QNR w");
+
+        board.load_from_fen("r4bnr/p2k4/Bpnp1p2/2p1p1pp/4PqP1/3PBP1P/PPP5/RNK2QNR w");
+        board.make_move(Move::new(20 , 29 , true , PieceType::WhiteBishop , None));
+
+        println!("{:#?}", board.to_fen());
+
+        println!(
+            "is king in check: {:#?}",
+            board.is_king_in_check(Turn::WHITE)
+        )
     }
 
     #[test]

@@ -59,6 +59,8 @@ while True:
     fen = safe_random_fen()
     # fen = "rnb2b1r/pp2kp2/6p1/2p1p1Pp/2P1n3/2QPB2B/qP2KP1P/RN4NR b - - 2 13"
     # fen = "1rb3kr/p2p4/np6/2p1qppp/5PnP/PPPp4/1B2P1KR/RN3BN1 w - - 0 21"
+    # fen = "2kr1bnB/pppN4/6p1/1N3p2/1np2P1r/P3Q3/4P1PP/1bK2BR1 w - - 2 20"
+    # fen = "r4bnr/p2k4/Bpnp1p2/2p1p1pp/4PqP1/3PBP1P/PPP5/RNK2QNR w - - 8 21"
     minimal_fen = fen.split(" ")[0:2]
     print("Random FEN:")
     print(fen)

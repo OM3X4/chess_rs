@@ -1255,27 +1255,71 @@ pub mod chess {
             attacks
         } //
 
-        #[inline(always)]
+        #[inline]
         pub fn is_check_by_bishop(&self, king_bb: u64, sliders: u64) -> bool {
             let occ = self.occupied.0;
             let k = king_bb.trailing_zeros() as i32;
 
-            const DIRS: [i32; 4] = [9, 7, -7, -9];
+            let mut all_locations = 0u64;
 
-            for d in DIRS {
-                let mut sq = k + d;
-                while sq >= 0 && sq < 64 && ((sq ^ k) & 7).abs() <= 1 {
-                    let bb = 1u64 << sq;
-                    if occ & bb != 0 {
-                        if sliders & bb != 0 {
-                            return true;
-                        };
-                    };
-                    sq += d;
+            // NE
+            let mut sq = k + 9;
+            while sq < 64 && ((1u64 << sq) & FILE_A) == 0 {
+                let bb = 1u64 << sq;
+                all_locations |= bb;
+                if occ & bb != 0 {
+                    if sliders & bb != 0 {
+                        return true;
+                    }
                 }
+                sq += 9;
             }
-            false
-        } //
+
+            // NW
+            let mut sq = k + 7;
+            while sq < 64 && ((1u64 << sq) & FILE_H) == 0 {
+                let bb = 1u64 << sq;
+                all_locations |= bb;
+                if occ & bb != 0 {
+                    if sliders & bb != 0 {
+                        return true;
+                    }
+                }
+                sq += 7;
+            }
+
+            // SE
+            let mut sq = k - 7;
+            println!("initial square from soute east {sq}");
+            while sq >= 0 && ((1u64 << sq) & FILE_A) == 0 {
+                println!("sq from south east {sq}");
+                let bb = 1u64 << sq;
+                all_locations |= bb;
+                if occ & bb != 0 {
+                    if sliders & bb != 0 {
+                        return true;
+                    }
+                }
+                sq -= 7;
+            }
+
+            // SW
+            let mut sq = k - 9;
+            while sq >= 0 && ((1u64 << sq) & FILE_H) == 0 {
+                let bb = 1u64 << sq;
+                all_locations |= bb;
+                if occ & bb != 0 {
+                    if sliders & bb != 0 {
+                        return true;
+                    }
+                }
+                sq -= 9;
+            }
+
+            println!("all locations {:#?}", extract_bits(&BitBoard(all_locations)));
+
+            all_locations & sliders != 0
+        }
 
         #[inline(always)]
         pub fn is_check_by_rook(&self, king_bb: u64, sliders: u64) -> bool {
@@ -1406,11 +1450,11 @@ pub mod chess {
 
         pub fn is_king_in_check(&self, turn: Turn) -> bool {
             let (king, enemy_king) = match turn {
-                Turn::BLACK => (&self.bitboards.black_king, &self.bitboards.white_king),
-                Turn::WHITE => (&self.bitboards.white_king, &self.bitboards.black_king),
+                Turn::BLACK => (&self.bitboards.black_king.0, &self.bitboards.white_king.0),
+                Turn::WHITE => (&self.bitboards.white_king.0, &self.bitboards.black_king.0),
             };
 
-            let king_square = king.0.trailing_zeros() as u64;
+            let king_square = king.trailing_zeros() as u64;
 
             let enemy_rooks = match turn {
                 Turn::BLACK => &self.bitboards.white_rooks.0,
@@ -1432,10 +1476,10 @@ pub mod chess {
                 Turn::BLACK => &self.bitboards.white_pawns.0,
                 Turn::WHITE => &self.bitboards.black_pawns.0,
             };
-            let enemy_king = match turn {
-                Turn::BLACK => &self.bitboards.white_king.0,
-                Turn::WHITE => &self.bitboards.black_king.0,
-            };
+
+            println!("king bb: {:064b}", king);
+            println!("enemy bishops: {:064b}", enemy_bishops);
+            println!("enemy queens: {:064b}", enemy_queens);
 
             let is_attacked_by_knights =
                 (KNIGHTS_ATTACK_TABLE.get(king_square as usize).unwrap() & enemy_knights) != 0;
@@ -1452,7 +1496,7 @@ pub mod chess {
             }
 
             let is_attacked_by_bishops_or_queens =
-                self.is_check_by_bishop(king.0, *enemy_bishops | *enemy_queens);
+                self.is_check_by_bishop(*king, *enemy_bishops | *enemy_queens);
 
             if is_attacked_by_bishops_or_queens {
                 return true;
@@ -1462,52 +1506,42 @@ pub mod chess {
             // println!("Enemy Queens: {:#?}" , *enemy_queens as u64);
 
             let is_attacked_by_rooks_or_queens =
-                self.is_check_by_rook(king.0, *enemy_rooks | *enemy_queens);
+                self.is_check_by_rook(*king, *enemy_rooks | *enemy_queens);
 
             if is_attacked_by_rooks_or_queens {
                 return true;
             }
 
+            let file = king_square % 8;
+
             match turn {
                 Turn::BLACK => {
-                    if king.0 & FILE_A != 0 {
-                        let attacking_pawns_mask = 1u64 << king_square - 7;
-                        if enemy_pawns & attacking_pawns_mask != 0 {
+                    // White pawns attack DOWN (-7, -9)
+                    if king_square >= 7 && file != 0 {
+                        if enemy_pawns & (1u64 << (king_square - 7)) != 0 {
                             return true;
                         }
-                    } else if king.0 & FILE_H != 0 {
-                        let attacking_pawns_mask = 1u64 << king_square - 9;
-                        if enemy_pawns & attacking_pawns_mask != 0 {
-                            return true;
-                        }
-                    } else {
-                        let attacking_pawns_mask =
-                            (1u64 << (king_square - 7)) | (1u64 << (king_square - 9));
-                        if enemy_pawns & attacking_pawns_mask != 0 {
+                    }
+                    if king_square >= 9 && file != 7 {
+                        if enemy_pawns & (1u64 << (king_square - 9)) != 0 {
                             return true;
                         }
                     }
                 }
                 Turn::WHITE => {
-                    if king.0 & FILE_A != 0 {
-                        let attacking_pawns_mask = 1u64 << king_square + 9;
-                        if enemy_pawns & attacking_pawns_mask != 0 {
+                    // Black pawns attack UP (+7, +9)
+                    if king_square <= 56 && file != 7 {
+                        if enemy_pawns & (1u64 << (king_square + 7)) != 0 {
                             return true;
                         }
-                    } else if king.0 & FILE_H != 0 {
-                        let attacking_pawns_mask = 1u64 << king_square + 7;
-                        if enemy_pawns & attacking_pawns_mask != 0 {
-                            return true;
-                        }
-                    } else {
-                        let attacking_pawns_mask =
-                            (1u64 << (king_square + 7)) | (1u64 << (king_square + 9));
-                        if enemy_pawns & attacking_pawns_mask != 0 {
+                    }
+                    if king_square <= 54 && file != 0 {
+                        if enemy_pawns & (1u64 << (king_square + 9)) != 0 {
                             return true;
                         }
                     }
                 }
-            };
+            }
 
             return false;
         } //
@@ -1753,9 +1787,18 @@ mod test {
     #[test]
     fn move_generation() {
         let mut board = Board::new();
-        board.load_from_fen("rnb2b1r/pp2kp2/6p1/2p1p1Pp/2P1n3/2QPB2B/qP2KP1P/RN4NR b");
-        let moves = board.generate_moves();
-        println!("{:#?}", moves);
+        // board.load_from_fen("rnb2b1r/pp2kp2/6p1/2p1p1Pp/2P1n3/2QPB2B/qP2KP1P/RN4NR b");
+        // board.load_from_fen("rnb2b1r/pp3p2/4k1p1/2p1p1Pp/2P1n3/2QPB2B/qP2KP1P/RN4NR b");
+        // println!(
+        //     "is king in check: {:#?}",
+        //     board.is_king_in_check(Turn::BLACK)
+        // )
+
+        let king_bb = 1u64 << 53; // f7
+        let bishops = 1u64 << 26; // c4
+        assert!(board.is_check_by_bishop(king_bb, bishops));
+        // let moves = board.generate_moves();
+        // println!("{:#?}", moves);
     }
 
     #[test]

@@ -376,8 +376,8 @@ pub mod chess {
 
     #[derive(Debug, Clone)]
     pub struct Move {
-        from: u64,
-        to: u64,
+        pub from: u64,
+        pub to: u64,
         piece_type: PieceType,
         captured_piece: Option<PieceType>,
         capture: bool,
@@ -740,7 +740,7 @@ pub mod chess {
                 // single and double jump
                 if from < 55 && (blockers & 1u64 << from + 8) == 0 {
                     add(from.into(), (from + 8).into(), false);
-                    if ((from as u64 & RANK_2) != 0) && (blockers & 1u64 << (from + 16)) == 0 {
+                    if (((1u64 << from) & RANK_2) != 0) && (blockers & 1u64 << (from + 16)) == 0 {
                         add(from.into(), (from + 16).into(), false);
                     }
                 }
@@ -789,7 +789,7 @@ pub mod chess {
                 // single and double jump
                 if from >= 8 && (blockers & 1u64 << (from - 8)) == 0 {
                     add(from.into(), (from - 8).into(), false);
-                    if ((from as u64 & RANK_7) != 0) && (blockers & 1u64 << (from - 16)) == 0 {
+                    if (((1u64 << from) & RANK_7) != 0) && (blockers & (1u64 << (from - 16))) == 0 {
                         add(from.into(), (from - 16).into(), false);
                     }
                 }
@@ -1245,13 +1245,15 @@ pub mod chess {
                 while sq >= 0 && sq < 64 && ((sq ^ k) & 7).abs() <= 1 {
                     let bb = 1u64 << sq;
                     if occ & bb != 0 {
-                        return (sliders & bb) != 0;
-                    }
+                        if sliders & bb != 0 {
+                            return true;
+                        };
+                    };
                     sq += d;
-                }
-            }
+                };
+            };
             false
-        }
+        } //
 
         #[inline(always)]
         pub fn is_check_by_rook(&self, king_bb: u64, sliders: u64) -> bool {
@@ -1259,12 +1261,19 @@ pub mod chess {
             let k = king_bb.trailing_zeros() as i32;
             let rank = k & 56;
 
+            // println!(
+            //     "rook check test: occ={:#x}, sliders={:#x}, king={}",
+            //     occ, sliders, k
+            // );
+
             // North / South
             let mut sq = k + 8;
             while sq < 64 {
                 let bb = 1u64 << sq;
                 if occ & bb != 0 {
-                    return sliders & bb != 0;
+                    if sliders & bb != 0 {
+                        return true;
+                    }
                 }
                 sq += 8;
             }
@@ -1273,7 +1282,9 @@ pub mod chess {
             while sq >= 0 {
                 let bb = 1u64 << sq;
                 if occ & bb != 0 {
-                    return sliders & bb != 0;
+                    if sliders & bb != 0 {
+                        return true;
+                    }
                 }
                 sq -= 8;
             }
@@ -1283,7 +1294,9 @@ pub mod chess {
             while sq < 64 && (sq & 56) == rank {
                 let bb = 1u64 << sq;
                 if occ & bb != 0 {
-                    return sliders & bb != 0;
+                    if sliders & bb != 0 {
+                        return true;
+                    }
                 }
                 sq += 1;
             }
@@ -1292,13 +1305,15 @@ pub mod chess {
             while sq >= 0 && (sq & 56) == rank {
                 let bb = 1u64 << sq;
                 if occ & bb != 0 {
-                    return sliders & bb != 0;
+                    if sliders & bb != 0 {
+                        return true;
+                    }
                 }
                 sq -= 1;
             }
 
             false
-        }
+        } //
 
         pub fn generate_pesudo_moves(&self, mut moves: &mut Vec<Move>) {
             self.generate_knight_moves(&mut moves);
@@ -1334,21 +1349,23 @@ pub mod chess {
 
             let is_king_in_check_now = self.is_king_in_check(self.turn);
 
+            // println!("King in check : {}", is_king_in_check_now);
+
             for mv in pesudo_moves {
-                if !is_king_in_check_now {
-                    if (1u64 << mv.from) & SQUARE_RAYS[king_bb.trailing_zeros() as usize] == 0
-                        && mv.piece_type != king_type
-                    {
-                        legal_moves.push(mv);
-                        continue;
-                    }
-                } else {
-                    if (1u64 << mv.to) & SQUARE_RAYS[king_bb.trailing_zeros() as usize] == 0
-                        && mv.piece_type != king_type
-                    {
-                        continue;
-                    }
-                }
+                // if !is_king_in_check_now {
+                //     if (1u64 << mv.from) & SQUARE_RAYS[king_bb.trailing_zeros() as usize] == 0
+                //         && mv.piece_type != king_type
+                //     {
+                //         legal_moves.push(mv);
+                //         continue;
+                //     }
+                // } else {
+                //     if (1u64 << mv.to) & SQUARE_RAYS[king_bb.trailing_zeros() as usize] == 0
+                //         && mv.piece_type != king_type
+                //     {
+                //         continue;
+                //     }
+                // }
 
                 let old_bitboards = self.bitboards;
                 self.make_move(mv);
@@ -1361,7 +1378,7 @@ pub mod chess {
                 }
                 self.bitboards = old_bitboards;
                 self.switch_turn();
-            }
+            };
             return legal_moves;
         } //
 
@@ -1378,7 +1395,7 @@ pub mod chess {
                 Turn::WHITE => &self.bitboards.black_rooks.0,
             };
             let enemy_queens = match turn {
-                Turn::BLACK => &self.bitboards.black_queens.0,
+                Turn::BLACK => &self.bitboards.white_queens.0,
                 Turn::WHITE => &self.bitboards.black_queens.0,
             };
             let enemy_bishops = match turn {
@@ -1393,6 +1410,10 @@ pub mod chess {
                 Turn::BLACK => &self.bitboards.white_pawns.0,
                 Turn::WHITE => &self.bitboards.black_pawns.0,
             };
+            let enemy_king = match turn {
+                Turn::BLACK => &self.bitboards.white_king.0,
+                Turn::WHITE => &self.bitboards.black_king.0,
+            };
 
             let is_attacked_by_knights =
                 (KNIGHTS_ATTACK_TABLE.get(king_square as usize).unwrap() & enemy_knights) != 0;
@@ -1402,7 +1423,7 @@ pub mod chess {
             }
 
             let is_attacked_by_king =
-                (KING_ATTACK_TABLE.get(king_square as usize).unwrap() & enemy_knights) != 0;
+                (KING_ATTACK_TABLE.get(king_square as usize).unwrap() & enemy_king) != 0;
 
             if is_attacked_by_king {
                 return true;
@@ -1414,6 +1435,9 @@ pub mod chess {
             if is_attacked_by_bishops_or_queens {
                 return true;
             }
+
+            // println!("Enemy Rooks: {:#?}" ,  *enemy_rooks as u64);
+            // println!("Enemy Queens: {:#?}" , *enemy_queens as u64);
 
             let is_attacked_by_rooks_or_queens =
                 self.is_check_by_rook(king.0, *enemy_rooks | *enemy_queens);
@@ -1702,6 +1726,14 @@ mod test {
             duration.as_secs_f64(),
             count
         );
+    }
+
+    #[test]
+    fn move_generation() {
+        let mut board = Board::new();
+        board.load_from_fen("rnb2b1r/pp2kp2/6p1/2p1p1Pp/2P1n3/2QPB2B/qP2KP1P/RN4NR b");
+        let moves = board.generate_moves();
+        println!("{:#?}", moves);
     }
 
     #[test]

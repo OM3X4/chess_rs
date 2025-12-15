@@ -61,7 +61,7 @@ impl Board {
             return 0;
         }
 
-        if depth >= 5 {
+        if depth >= 4 {
             return self.evaluate();
         }
 
@@ -76,17 +76,13 @@ impl Board {
             Turn::WHITE => {
                 let mut best_score = i32::MIN;
                 for mv in moves {
-                    let old_bitmaps = self.bitboards;
-                    let old_occupied = self.occupied;
-                    let old_hash = self.hash;
-                    self.make_move(mv);
+
+                    let unmake_move = self.make_move(mv);
 
                     let score = self.minimax(depth + 1, moves_map);
 
-                    self.switch_turn();
-                    self.hash = old_hash;
-                    self.occupied = old_occupied;
-                    self.bitboards = old_bitmaps;
+                    self.unmake_move(unmake_move);
+
                     if score > best_score {
                         best_score = score;
                     }
@@ -97,17 +93,12 @@ impl Board {
             Turn::BLACK => {
                 let mut best_score = i32::MAX;
                 for mv in moves {
-                    let old_bitmaps = self.bitboards;
-                    let old_occupied = self.occupied;
-                    let old_hash = self.hash;
-                    self.make_move(mv);
+
+                    let unmake_move = self.make_move(mv);
 
                     let score = self.minimax(depth + 1, moves_map);
 
-                    self.switch_turn();
-                    self.hash = old_hash;
-                    self.occupied = old_occupied;
-                    self.bitboards = old_bitmaps;
+                    self.unmake_move(unmake_move);
 
                     if score < best_score {
                         best_score = score;
@@ -136,7 +127,7 @@ impl Board {
             return 0;
         }
 
-        if depth >= 1 {
+        if depth >= 5 {
             return self.evaluate();
         }
 
@@ -171,17 +162,12 @@ impl Board {
             Turn::BLACK => {
                 let mut best_score = i32::MAX;
                 for mv in moves {
-                    let old_bitmaps = self.bitboards;
-                    let old_occupied = self.occupied;
-                    let old_hash = self.hash;
-                    self.make_move(mv);
 
-                    let score = self.alpha_beta(depth + 1, alpha , beta , moves_map);
+                    let unmake_move = self.make_move(mv);
 
-                    self.switch_turn();
-                    self.hash = old_hash;
-                    self.occupied = old_occupied;
-                    self.bitboards = old_bitmaps;
+                    let score = self.minimax(depth + 1, moves_map);
+
+                    self.unmake_move(unmake_move);
 
                     best_score = best_score.min(score);
                     beta = beta.min(best_score);
@@ -239,6 +225,9 @@ mod test {
 
         let mut board = Board::new();
         let mut moves_map: HashMap<u64, (i32, i32)> = HashMap::new();
-        println!("{}", board.minimax(0, &mut moves_map));
+        let score_minimax = board.minimax(0, &mut moves_map);
+        let mut moves_map2: HashMap<u64, (i32, i32)> = HashMap::new();
+        let score_alpha_beta = board.alpha_beta(0, i32::MIN, i32::MAX, &mut moves_map2);
+        println!("minimax: {} , alphabeta: {}", score_minimax, score_alpha_beta);
     }
 }

@@ -37,7 +37,13 @@ impl Board {
             Turn::BLACK => (self.bitboards.black_king.0, PieceType::BlackKing),
         };
 
+
+
         let from = king.trailing_zeros() as u64;
+        if from > 63 {
+            return;
+        }
+
         let mut attacks = KING_ATTACK_TABLE.get(from as usize).unwrap() & !allay_bits;
 
         while attacks != 0 {
@@ -699,6 +705,10 @@ impl Board {
         let is_king_in_check_now = self.is_king_in_check(self.turn);
         let king_square = king_bb.trailing_zeros() as usize;
 
+        if king_square > 63 {
+            return legal_moves;
+        }
+
         for mv in pesudo_moves {
             if !is_king_in_check_now {
                 if ((1u64 << mv.from) & SQUARE_RAYS[king_square]) == 0 && mv.piece_type != king_type
@@ -733,6 +743,11 @@ impl Board {
             Turn::WHITE => (&self.bitboards.white_king.0, &self.bitboards.black_king.0),
         };
 
+
+        if king.trailing_zeros() > 63 {
+            return false;
+        }
+
         let king_square = king.trailing_zeros() as u64;
 
         let enemy_rooks = match turn {
@@ -755,7 +770,6 @@ impl Board {
             Turn::BLACK => &self.bitboards.white_pawns.0,
             Turn::WHITE => &self.bitboards.black_pawns.0,
         };
-
         let is_attacked_by_knights =
             (KNIGHTS_ATTACK_TABLE.get(king_square as usize).unwrap() & enemy_knights) != 0;
 

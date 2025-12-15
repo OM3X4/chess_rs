@@ -13,3 +13,7 @@ tracing-subscriber = "0.3.22"
 name = "test_checkmate"
 path = "src/bin/test_checkmate.rs"
 
+[[bin]]
+name = "minimax"
+path = "src/bin/minimax.rs"
+

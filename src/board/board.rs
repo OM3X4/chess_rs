@@ -1,6 +1,7 @@
 use super::{BitBoard, BitBoards, Move, Turn , GameState};
 use super::constants::{RANK_1 , RANK_2, RANK_7, RANK_8};
 
+#[derive(Debug, Copy, Clone)]
 pub struct Board {
     pub bitboards: BitBoards,
     pub undo: Option<Move>,

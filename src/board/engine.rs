@@ -152,17 +152,11 @@ impl Board {
             Turn::WHITE => {
                 let mut best_score = i32::MIN;
                 for mv in moves {
-                    let old_bitmaps = self.bitboards;
-                    let old_occupied = self.occupied;
-                    let old_hash = self.hash;
-                    self.make_move(mv);
+                    let unmake_move = self.make_move(mv);
 
                     let score = self.alpha_beta(depth + 1, alpha, beta, moves_map);
 
-                    self.switch_turn();
-                    self.hash = old_hash;
-                    self.occupied = old_occupied;
-                    self.bitboards = old_bitmaps;
+                    self.unmake_move(unmake_move);
 
                     best_score = best_score.max(score);
                     alpha = alpha.max(best_score);

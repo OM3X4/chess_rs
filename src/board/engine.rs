@@ -1,6 +1,38 @@
 use std::collections::HashMap;
 
-use super::{Board, GameState, Move, Turn};
+use super::zobrist::{Z_PIECE, Z_SIDE};
+use super::{Board, GameState, Move, PieceType, Turn , TTEntry , TranspositionTable};
+
+impl TranspositionTable {
+    pub fn new(size_pow2: usize) -> Self {
+        let size = 1usize << size_pow2;
+        Self {
+            table: vec![None; size],
+            mask: size - 1,
+        }
+    }
+
+    #[inline(always)]
+    fn index(&self, key: u64) -> usize {
+        (key as usize) & self.mask
+    }
+
+    #[inline(always)]
+    pub fn get(&self, key: u64, depth: i8) -> Option<i32> {
+        let entry = self.table[self.index(key)]?;
+        if entry.key == key && entry.depth >= depth {
+            Some(entry.score)
+        } else {
+            None
+        }
+    }
+
+    #[inline(always)]
+    pub fn put(&mut self, key: u64, depth: i8, score: i32) {
+        let idx = self.index(key);
+        self.table[idx] = Some(TTEntry { key, depth, score });
+    }
+}
 
 impl Board {
     /// The score is turn agnostic , it always returns the score of the white player
@@ -76,7 +108,6 @@ impl Board {
             Turn::WHITE => {
                 let mut best_score = i32::MIN;
                 for mv in moves {
-
                     let unmake_move = self.make_move(mv);
 
                     let score = self.minimax(depth + 1, moves_map);
@@ -93,7 +124,6 @@ impl Board {
             Turn::BLACK => {
                 let mut best_score = i32::MAX;
                 for mv in moves {
-
                     let unmake_move = self.make_move(mv);
 
                     let score = self.minimax(depth + 1, moves_map);
@@ -115,8 +145,15 @@ impl Board {
         depth: i32,
         mut alpha: i32,
         mut beta: i32,
-        moves_map: &mut HashMap<u64, (i32, i32)>,
+        tt: &mut TranspositionTable,
     ) -> i32 {
+        const MAX_DEPTH: i32 = 7;
+        let remaining_depth = (MAX_DEPTH - depth) as i8;
+
+        if let Some((score)) = tt.get(self.hash, (MAX_DEPTH - depth) as i8) {
+            // dbg!("skipped evaluation");
+            return score;
+        }
         let game_state = self.get_game_state();
         if game_state == GameState::CheckMate {
             match self.turn {
@@ -127,25 +164,17 @@ impl Board {
             return 0;
         }
 
-        if depth >= 5 {
+        if depth >= MAX_DEPTH {
             return self.evaluate();
         }
-
-        let moves: Vec<Move>;
-        if let Some((score, stored_depth)) = moves_map.get(&self.hash) {
-            if *stored_depth > depth {
-                return *score;
-            }
-        }
         let moves = self.generate_moves();
-        let hashmap: HashMap<Move, Vec<String>> = HashMap::new();
         match self.turn {
             Turn::WHITE => {
                 let mut best_score = i32::MIN;
                 for mv in moves {
                     let unmake_move = self.make_move(mv);
 
-                    let score = self.alpha_beta(depth + 1, alpha, beta, moves_map);
+                    let score = self.alpha_beta(depth + 1, alpha, beta, tt);
 
                     self.unmake_move(unmake_move);
 
@@ -156,16 +185,15 @@ impl Board {
                         break;
                     }
                 }
-                moves_map.insert(self.hash, (best_score, depth));
+                tt.put(self.hash, remaining_depth, best_score);
                 return best_score;
             } //
             Turn::BLACK => {
                 let mut best_score = i32::MAX;
                 for mv in moves {
-
                     let unmake_move = self.make_move(mv);
 
-                    let score = self.minimax(depth + 1, moves_map);
+                    let score = self.alpha_beta(depth + 1, alpha, beta, tt);
 
                     self.unmake_move(unmake_move);
 
@@ -176,7 +204,7 @@ impl Board {
                         break;
                     }
                 }
-                moves_map.insert(self.hash, (best_score, depth));
+                tt.put(self.hash, remaining_depth, best_score);
                 return best_score;
             } //
         } //
@@ -191,19 +219,35 @@ impl Board {
         z ^ (z >> 31)
     } //
 
-    pub fn compute_hash(&mut self) -> u64 {
+    pub fn compute_hash(&self) -> u64 {
         let mut h = 0u64;
-        let z = &self.zobrist;
 
-        for sq in 0..64 {
-            if let Some(piece) = self.piece_at(sq) {
-                let piece_index = piece.piece_index();
-                h ^= z.piece_square[piece_index][sq as usize];
+        for piece in [
+            PieceType::WhitePawn,
+            PieceType::WhiteKnight,
+            PieceType::WhiteBishop,
+            PieceType::WhiteRook,
+            PieceType::WhiteQueen,
+            PieceType::WhiteKing,
+            PieceType::BlackPawn,
+            PieceType::BlackKnight,
+            PieceType::BlackBishop,
+            PieceType::BlackRook,
+            PieceType::BlackQueen,
+            PieceType::BlackKing,
+        ] {
+            let mut bb = self.bitboards.get(piece);
+            let p = piece.piece_index();
+
+            while bb != 0 {
+                let sq = bb.trailing_zeros() as usize;
+                bb &= bb - 1;
+                h ^= Z_PIECE[p][sq];
             }
         }
 
         if self.turn == Turn::BLACK {
-            h ^= z.side_to_move;
+            h ^= *Z_SIDE;
         }
 
         h
@@ -211,6 +255,8 @@ impl Board {
 }
 
 mod test {
+    use crate::board::TranspositionTable;
+
     #[test]
     fn is_position_equal() {
         use super::Board;
@@ -224,10 +270,15 @@ mod test {
         use std::collections::HashMap;
 
         let mut board = Board::new();
+        board.load_from_fen("1rbk1bnr/pp3ppp/1Pp1p3/3p1P2/5N1q/2NQ2P1/1PP1P2P/R1B1KB1R w ");
         let mut moves_map: HashMap<u64, (i32, i32)> = HashMap::new();
         let score_minimax = board.minimax(0, &mut moves_map);
-        let mut moves_map2: HashMap<u64, (i32, i32)> = HashMap::new();
-        let score_alpha_beta = board.alpha_beta(0, i32::MIN, i32::MAX, &mut moves_map2);
-        println!("minimax: {} , alphabeta: {}", score_minimax, score_alpha_beta);
+        // let mut moves_map2: HashMap<u64, (i32, i32)> = HashMap::new();
+        let mut tt = TranspositionTable::new(20);
+        let score_alpha_beta = board.alpha_beta(0, i32::MIN, i32::MAX, &mut tt);
+        println!(
+            "minimax: {} , alphabeta: {}",
+            score_minimax, score_alpha_beta
+        );
     }
 }

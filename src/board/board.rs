@@ -9,34 +9,9 @@ pub struct Board {
     pub turn: Turn,
     pub occupied: BitBoard,
     pub hash: u64,
-    pub zobrist: Zobrist
 }
 
-#[derive(Debug, Copy, Clone, PartialEq, Eq, Hash)]
-pub struct Zobrist {
-    pub piece_square: [[u64; 64]; 12],
-    pub side_to_move: u64,
-}
 
-impl Zobrist {
-    pub fn init_zobrist() -> Zobrist {
-        let mut seed = 0xCAFEBABEDEADBEEF;
-
-        let mut piece_square = [[0u64; 64]; 12];
-        for p in 0..12 {
-            for sq in 0..64 {
-                piece_square[p][sq] = Board::splitmix64(&mut seed);
-            }
-        }
-
-        let side_to_move = Board::splitmix64(&mut seed);
-
-        Zobrist {
-            piece_square,
-            side_to_move,
-        }
-    }
-}
 
 impl Board {
     pub fn new() -> Board {
@@ -44,7 +19,6 @@ impl Board {
             bitboards: BitBoards::default(),
             turn: Turn::WHITE,
             hash: 0,
-            zobrist: Zobrist::init_zobrist(),
             occupied: BitBoard(RANK_1 | RANK_2 | RANK_7 | RANK_8),
         };
 
@@ -178,6 +152,8 @@ impl Board {
         }
 
         self.occupied = self.get_all_bits();
+
+        self.hash = self.compute_hash();
     } //
 
     pub fn to_fen(&self) -> String {

@@ -2,8 +2,20 @@ pub mod board;
 mod constants;
 mod engine;
 mod move_gen;
+mod zobrist;
 
 pub use board::Board;
+
+#[derive(Copy, Clone)]
+pub struct TTEntry {
+    pub key: u64,  // full zobrist key
+    pub depth: i8, // remaining depth
+    pub score: i32,
+}
+pub struct TranspositionTable {
+    table: Vec<Option<TTEntry>>,
+    mask: usize,
+}
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub enum PieceType {
@@ -52,12 +64,16 @@ pub struct Move {
 pub struct UnMakeMove {
     bitboards: BitBoards,
     occupied: BitBoard,
-    hash: u64
+    hash: u64,
 }
 
 impl UnMakeMove {
     pub fn new(bitboards: BitBoards, occupied: BitBoard, hash: u64) -> UnMakeMove {
-        UnMakeMove { bitboards, occupied, hash }
+        UnMakeMove {
+            bitboards,
+            occupied,
+            hash,
+        }
     }
 }
 
@@ -145,6 +161,43 @@ impl BitBoards {
             black_king: BitBoard(0),
         }
     } //
+
+    pub fn get_mut(&mut self, piece: PieceType) -> &mut u64 {
+        match piece {
+            PieceType::WhitePawn => &mut self.white_pawns.0,
+            PieceType::WhiteKnight => &mut self.white_knights.0,
+            PieceType::WhiteBishop => &mut self.white_bishops.0,
+            PieceType::WhiteRook => &mut self.white_rooks.0,
+            PieceType::WhiteQueen => &mut self.white_queens.0,
+            PieceType::WhiteKing => &mut self.white_king.0,
+
+            PieceType::BlackPawn => &mut self.black_pawns.0,
+            PieceType::BlackKnight => &mut self.black_knights.0,
+            PieceType::BlackBishop => &mut self.black_bishops.0,
+            PieceType::BlackRook => &mut self.black_rooks.0,
+            PieceType::BlackQueen => &mut self.black_queens.0,
+            PieceType::BlackKing => &mut self.black_king.0,
+        }
+    } //
+
+    #[inline(always)]
+    pub fn get(&self, piece: PieceType) -> u64 {
+        match piece {
+            PieceType::WhitePawn => self.white_pawns.0,
+            PieceType::WhiteKnight => self.white_knights.0,
+            PieceType::WhiteBishop => self.white_bishops.0,
+            PieceType::WhiteRook => self.white_rooks.0,
+            PieceType::WhiteQueen => self.white_queens.0,
+            PieceType::WhiteKing => self.white_king.0,
+
+            PieceType::BlackPawn => self.black_pawns.0,
+            PieceType::BlackKnight => self.black_knights.0,
+            PieceType::BlackBishop => self.black_bishops.0,
+            PieceType::BlackRook => self.black_rooks.0,
+            PieceType::BlackQueen => self.black_queens.0,
+            PieceType::BlackKing => self.black_king.0,
+        }
+    }//
 } //
 
 #[derive(PartialEq, Eq, Debug, Clone, Copy)]

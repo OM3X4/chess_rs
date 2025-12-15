@@ -1,3 +1,5 @@
+use crate::board::UnMakeMove;
+
 use super::constants::{
     BLACK_PAWN_ATTACKS, KING_ATTACK_TABLE, KNIGHTS_ATTACK_TABLE, SQUARE_RAYS, WHITE_PAWN_ATTACKS,
 };
@@ -702,7 +704,7 @@ impl Board {
             Turn::BLACK => PieceType::BlackKing,
         };
 
-        let is_king_in_check_now = self.is_king_in_check((self.turn));
+        let is_king_in_check_now = self.is_king_in_check(self.turn);
         let king_square = king_bb.trailing_zeros() as usize;
 
         if king_square > 63 {
@@ -726,14 +728,16 @@ impl Board {
             }
 
             let old_bitboards = self.bitboards;
-            self.make_move(mv);
+            let unmake_move = self.make_move(mv);
             self.switch_turn();
-            dbg!(mv.from , mv.to , self.to_fen() , self.is_king_in_check(self.turn));
+            // dbg!(mv.from , mv.to , self.to_fen() , self.is_king_in_check(self.turn));
             let is_illegal = self.is_king_in_check(self.turn);
             if !is_illegal {
                 legal_moves.push(mv);
             }
-            self.bitboards = old_bitboards;
+
+            self.unmake_move(unmake_move);
+            self.switch_turn();
         }
         return legal_moves;
     } //
@@ -817,10 +821,13 @@ impl Board {
     } //
 
     #[inline(always)]
-    pub fn make_move(&mut self, mv: Move) {
+    pub fn make_move(&mut self, mv: Move) -> UnMakeMove {
         let from = mv.from as usize;
         let to = mv.to as usize;
         let z = &self.zobrist;
+
+        // The Object Needed to unmake the move
+        let unmake_move = UnMakeMove::new(self.bitboards, self.occupied , self.hash);
 
         // =========================
         // 1. Zobrist: remove captured piece
@@ -927,7 +934,16 @@ impl Board {
             Turn::BLACK => Turn::WHITE,
         };
         self.hash ^= z.side_to_move;
-    }
+
+        return unmake_move;
+    }//
+
+    pub fn unmake_move(&mut self, unmake_move: UnMakeMove) {
+        self.bitboards = unmake_move.bitboards;
+        self.switch_turn();
+        self.hash = unmake_move.hash;
+        self.occupied = unmake_move.occupied;
+    }//
 }
 
 #[cfg(test)]

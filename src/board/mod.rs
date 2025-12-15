@@ -50,6 +50,18 @@ pub struct Move {
     capture: bool,
 } //
 
+pub struct UnMakeMove {
+    bitboards: BitBoards,
+    occupied: BitBoard,
+    hash: u64
+}
+
+impl UnMakeMove {
+    pub fn new(bitboards: BitBoards, occupied: BitBoard, hash: u64) -> UnMakeMove {
+        UnMakeMove { bitboards, occupied, hash }
+    }
+}
+
 impl Move {
     pub fn new(
         from: u64,

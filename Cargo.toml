@@ -10,5 +10,6 @@ tracing-flame = "0.2.0"
 tracing-subscriber = "0.3.22"
 
 [[bin]]
-name = "my_project"
-path = "src/main.rs"
+name = "test_checkmate"
+path = "src/bin/test_checkmate.rs"
+

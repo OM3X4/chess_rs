@@ -1,7 +1,7 @@
 pub mod board;
+mod constants;
 mod engine;
 mod move_gen;
-mod constants;
 
 pub use board::Board;
 
@@ -115,4 +115,11 @@ impl BitBoards {
             black_king: BitBoard(0),
         }
     } //
-}//
+} //
+
+#[derive(PartialEq, Eq, Debug, Clone, Copy)]
+pub enum GameState {
+    CheckMate,
+    StaleMate,
+    InProgress,
+}

@@ -1,4 +1,3 @@
-from stockfish import Stockfish
 import chess
 import random
 import subprocess
@@ -90,26 +89,3 @@ while True:
         print("Extra:", rust_moves - moves)
         exit(1)
     counter += 1
-
-# stockfish = Stockfish(
-#     path=r"C:/Program Files/stockfish/stockfish-windows-x86-64-avx2.exe",
-#     parameters={
-#         "Threads": 4,
-#         "Minimum Thinking Time": 30,
-#         "Skill Level": 20
-#     }
-# )
-
-# stockfish.set_fen_position(
-#     "r2q1rk1/pp1b1ppp/2np1n2/2p1p3/2P1P3/2NP1N2/PP1B1PPP/R2Q1RK1 w"
-# )
-
-# stockfish.move
-
-# # Best move
-# best_move = stockfish.get_best_move()
-# print("Best move:", best_move)
-
-# # Evaluation
-# eval = stockfish.get_evaluation()
-# print("Evaluation:", eval)

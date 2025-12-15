@@ -1,4 +1,4 @@
-use super::{BitBoard, BitBoards, Move, Turn};
+use super::{BitBoard, BitBoards, Move, Turn , GameState};
 use super::constants::{RANK_1 , RANK_2, RANK_7, RANK_8};
 
 pub struct Board {
@@ -7,6 +7,8 @@ pub struct Board {
     pub turn: Turn,
     pub occupied: BitBoard,
 }
+
+
 
 impl Board {
     pub fn new() -> Board {
@@ -196,4 +198,30 @@ impl Board {
             Turn::WHITE => Turn::BLACK,
         }
     } //
+
+    pub fn get_game_state(&mut self) -> GameState {
+        let moves = self.generate_moves();
+        let is_king_in_check = self.is_king_in_check(self.turn);
+        if moves.len() == 0 && is_king_in_check {
+            return GameState::CheckMate;
+        } else if moves.len() == 0 && !is_king_in_check {
+            return GameState::StaleMate;
+        } else {
+            return GameState::InProgress;
+        }
+    }//
 }//
+
+mod test {
+
+    use super::*;
+
+    #[test]
+    fn check_mate() {
+        let mut board = Board::new();
+        board.load_from_fen("rnbqkbnr/pppppQpp/8/8/2B5/8/PPPPPPPP/RNB1K1NR b");
+
+        assert_eq!(board.get_game_state(), GameState::CheckMate);
+        // assert_eq!(board.is_check_mate(), true);
+    }
+}

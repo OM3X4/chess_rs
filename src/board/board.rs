@@ -253,6 +253,13 @@ impl Board {
             return GameState::InProgress;
         }
     } //
+
+    pub fn opposite_turn(&self) -> Turn {
+        return match self.turn {
+            Turn::WHITE => Turn::BLACK,
+            Turn::BLACK => Turn::WHITE,
+        };
+    }
 } //
 
 mod test {

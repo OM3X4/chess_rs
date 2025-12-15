@@ -147,7 +147,7 @@ impl Board {
         mut beta: i32,
         tt: &mut TranspositionTable,
     ) -> i32 {
-        const MAX_DEPTH: i32 = 7;
+        const MAX_DEPTH: i32 = 8;
         let remaining_depth = (MAX_DEPTH - depth) as i8;
 
         if let Some(score) = tt.get(self.hash, (MAX_DEPTH - depth) as i8) {
@@ -167,14 +167,27 @@ impl Board {
         if depth >= MAX_DEPTH {
             return self.evaluate();
         }
-        let mut moves = self.generate_moves();
-        moves.sort_by_key(|mv| if mv.capture { 0 } else { 1 });
+        let mut moves = Vec::new();
+        self.generate_pesudo_moves(&mut moves);
+
+        // let mut moves = self.generate_moves();
+
+        let iter = moves.iter().filter(|m| m.capture)
+                                                .chain(moves.iter().filter(|m| !m.capture));
+
 
         match self.turn {
             Turn::WHITE => {
                 let mut best_score = i32::MIN;
-                for mv in moves {
-                    let unmake_move = self.make_move(mv);
+                for mv in iter {
+                    let unmake_move = self.make_move(*mv);
+
+                    let is_illegal_move = self.is_king_in_check(self.opposite_turn());
+
+                    if is_illegal_move {
+                        self.unmake_move(unmake_move);
+                        continue;
+                    }
 
                     let score = self.alpha_beta(depth + 1, alpha, beta, tt);
 
@@ -192,8 +205,15 @@ impl Board {
             } //
             Turn::BLACK => {
                 let mut best_score = i32::MAX;
-                for mv in moves {
-                    let unmake_move = self.make_move(mv);
+                for mv in iter {
+                    let unmake_move = self.make_move(*mv);
+
+                    let is_illegal_move = self.is_king_in_check(self.opposite_turn());
+
+                    if is_illegal_move {
+                        self.unmake_move(unmake_move);
+                        continue;
+                    }
 
                     let score = self.alpha_beta(depth + 1, alpha, beta, tt);
 
@@ -268,8 +288,8 @@ mod test {
     #[test]
     fn minimax() {
         use super::Board;
-        use std::collections::HashMap;
         use super::TranspositionTable;
+        use std::collections::HashMap;
 
         let mut board = Board::new();
         board.load_from_fen("1rbk1bnr/pp3ppp/1Pp1p3/3p1P2/5N1q/2NQ2P1/1PP1P2P/R1B1KB1R w ");

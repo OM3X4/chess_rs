@@ -46,7 +46,6 @@ pub struct Move {
     pub from: u64,
     pub to: u64,
     piece_type: PieceType,
-    captured_piece: Option<PieceType>,
     capture: bool,
 } //
 
@@ -75,7 +74,6 @@ impl Move {
             to,
             capture,
             piece_type,
-            captured_piece,
         };
     }
 } //

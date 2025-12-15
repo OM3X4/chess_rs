@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
 use super::zobrist::{Z_PIECE, Z_SIDE};
-use super::{Board, GameState, Move, PieceType, Turn , TTEntry , TranspositionTable};
+use super::{Board, GameState, Move, PieceType, TTEntry, TranspositionTable, Turn};
 
 impl TranspositionTable {
     pub fn new(size_pow2: usize) -> Self {
@@ -150,7 +150,7 @@ impl Board {
         const MAX_DEPTH: i32 = 7;
         let remaining_depth = (MAX_DEPTH - depth) as i8;
 
-        if let Some((score)) = tt.get(self.hash, (MAX_DEPTH - depth) as i8) {
+        if let Some(score) = tt.get(self.hash, (MAX_DEPTH - depth) as i8) {
             // dbg!("skipped evaluation");
             return score;
         }
@@ -167,7 +167,9 @@ impl Board {
         if depth >= MAX_DEPTH {
             return self.evaluate();
         }
-        let moves = self.generate_moves();
+        let mut moves = self.generate_moves();
+        moves.sort_by_key(|mv| if mv.capture { 0 } else { 1 });
+
         match self.turn {
             Turn::WHITE => {
                 let mut best_score = i32::MIN;
@@ -255,7 +257,6 @@ impl Board {
 }
 
 mod test {
-    use crate::board::TranspositionTable;
 
     #[test]
     fn is_position_equal() {
@@ -268,6 +269,7 @@ mod test {
     fn minimax() {
         use super::Board;
         use std::collections::HashMap;
+        use super::TranspositionTable;
 
         let mut board = Board::new();
         board.load_from_fen("1rbk1bnr/pp3ppp/1Pp1p3/3p1P2/5N1q/2NQ2P1/1PP1P2P/R1B1KB1R w ");

@@ -17,6 +17,12 @@ pub struct TranspositionTable {
     mask: usize,
 }
 
+pub enum Bound {
+    Upper,
+    Lower,
+    Exact
+}
+
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub enum PieceType {
     WhitePawn,

@@ -39,7 +39,7 @@ impl Board {
                 let to = attacks.trailing_zeros() as u64;
                 attacks &= attacks - 1;
                 let capture = (enemy_bits & to) != 0;
-                moves.push(Move::new(from.into(), to.into(), capture, piece_type, None));
+                moves.push(Move::new(from as u8, to as u8, piece_type, capture));
             }
         }
     } //
@@ -65,7 +65,7 @@ impl Board {
             let to = attacks.trailing_zeros() as u64;
             attacks &= attacks - 1;
             let capture = (enemy_bits & to) != 0;
-            moves.push(Move::new(from.into(), to.into(), capture, piece_type, None));
+            moves.push(Move::new(from as u8, to as u8, piece_type, capture));
         }
     } //
 
@@ -76,13 +76,7 @@ impl Board {
         let enemy_pieces_bb = self.get_all_black_bits();
 
         let mut add = |from: u64, to: u64, capture: bool| {
-            moves.push(Move::new(
-                from.into(),
-                to.into(),
-                capture,
-                PieceType::WhitePawn,
-                None,
-            ));
+            moves.push(Move::new(from as u8, to as u8, PieceType::WhitePawn, capture));
         };
 
         let mut pawns = self.bitboards.white_pawns.0;
@@ -117,13 +111,7 @@ impl Board {
         let enemy_pieces_bb = self.get_all_white_bits();
 
         let mut add = |from: u64, to: u64, capture: bool| {
-            moves.push(Move::new(
-                from.into(),
-                to.into(),
-                capture,
-                PieceType::BlackPawn,
-                None,
-            ));
+            moves.push(Move::new(from as u8, to as u8, PieceType::BlackPawn, capture));
         };
 
         let mut pawns = self.bitboards.black_pawns.0;
@@ -162,7 +150,7 @@ impl Board {
         };
 
         let mut add = |from: u64, to: u64, capture: bool| {
-            moves.push(Move::new(from, to, capture, piece_type, None));
+            moves.push(Move::new(from as u8, to as u8, piece_type, capture));
         };
 
         while rooks != 0 {
@@ -252,7 +240,7 @@ impl Board {
         };
 
         let mut add = |from: u64, to: u64, capture: bool| {
-            moves.push(Move::new(from, to, capture, piece_type, None));
+            moves.push(Move::new(from as u8, to as u8, piece_type, capture));
         };
 
         while rooks != 0 {
@@ -283,7 +271,7 @@ impl Board {
         };
 
         let mut add = |from: u64, to: u64, capture: bool| {
-            moves.push(Move::new(from.into(), to.into(), capture, piece_type, None));
+            moves.push(Move::new(from as u8, to as u8, piece_type, capture));
         };
 
         while bishops != 0 {
@@ -379,7 +367,7 @@ impl Board {
         };
 
         let mut add = |from: u64, to: u64, capture: bool| {
-            moves.push(Move::new(from.into(), to.into(), capture, piece_type, None));
+            moves.push(Move::new(from as u8, to as u8, piece_type, capture));
         };
 
         while queen_bits != 0 {
@@ -758,15 +746,15 @@ impl Board {
 
         for mv in pesudo_moves {
             if !is_king_in_check_now {
-                if ((1u64 << mv.from) & SQUARE_RAYS[king_square]) == 0 && mv.piece_type != king_type
+                if ((1u64 << mv.from()) & SQUARE_RAYS[king_square]) == 0 && mv.piece() != king_type
                 {
                     legal_moves.push(mv);
                     continue;
                 }
             } else {
-                if (1u64 << mv.to) & (SQUARE_RAYS[king_square] | KNIGHTS_ATTACK_TABLE[king_square])
+                if (1u64 << mv.to()) & (SQUARE_RAYS[king_square] | KNIGHTS_ATTACK_TABLE[king_square])
                     == 0
-                    && mv.piece_type != king_type
+                    && mv.piece() != king_type
                 {
                     continue;
                 }
@@ -866,8 +854,8 @@ impl Board {
 
     #[inline(always)]
     pub fn make_move(&mut self, mv: Move) -> UnMakeMove {
-        let from = mv.from as usize;
-        let to = mv.to as usize;
+        let from = mv.from() as usize;
+        let to = mv.to() as usize;
 
         let occupied = self.occupied.0;
 
@@ -925,7 +913,7 @@ impl Board {
         let from_mask = 1u64 << from;
         let to_mask = 1u64 << to;
 
-        match mv.piece_type {
+        match mv.piece() {
             PieceType::WhitePawn => {
                 self.bitboards.white_pawns.0 &= !from_mask;
                 self.bitboards.white_pawns.0 |= to_mask;
@@ -979,7 +967,7 @@ impl Board {
         // =========================
         // 3. Zobrist: move piece
         // =========================
-        let piece_idx = mv.piece_type.piece_index();
+        let piece_idx = mv.piece().piece_index();
         self.hash ^= Z_PIECE[piece_idx][from];
         self.hash ^= Z_PIECE[piece_idx][to];
 

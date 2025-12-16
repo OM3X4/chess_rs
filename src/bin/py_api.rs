@@ -14,6 +14,6 @@ fn main() {
     let moves = board.generate_moves();
 
     for m in moves {
-        println!("{} {}", m.from, m.to);
+        println!("{} {}", m.from(), m.to());
     }
 }

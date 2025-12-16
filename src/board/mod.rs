@@ -2,8 +2,8 @@ pub mod board;
 mod constants;
 mod engine;
 pub mod move_gen;
-mod zobrist;
 pub mod rook_magic;
+mod zobrist;
 
 pub use board::Board;
 
@@ -21,7 +21,7 @@ pub struct TranspositionTable {
 pub enum Bound {
     Upper,
     Lower,
-    Exact
+    Exact,
 }
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
@@ -60,13 +60,48 @@ impl PieceType {
     }
 }
 
-#[derive(Debug, Copy, Clone)]
-pub struct Move {
-    pub from: u64,
-    pub to: u64,
-    piece_type: PieceType,
-    capture: bool,
-} //
+// #[derive(Debug, Copy, Clone)]
+// pub struct Move {
+//     pub from: u64,
+//     pub to: u64,
+//     piece_type: PieceType,
+//     capture: bool,
+// } //
+
+#[derive(Copy, Clone)]
+#[repr(transparent)]
+pub struct Move(u32);
+
+impl Move {
+    #[inline(always)]
+    pub fn new(from: u8, to: u8, piece: PieceType, capture: bool) -> Self {
+        let mut m = from as u32;
+        m |= (to as u32) << 6;
+        m |= (piece as u32) << 12;
+        m |= (capture as u32) << 16;
+        Move(m)
+    }
+
+    #[inline(always)]
+    pub fn from(self) -> u8 {
+        (self.0 & 0b111111) as u8
+    }
+
+    #[inline(always)]
+    pub fn to(self) -> u8 {
+        ((self.0 >> 6) & 0b111111) as u8
+    }
+
+    #[inline(always)]
+    pub fn piece(self) -> PieceType {
+        unsafe { std::mem::transmute(((self.0 >> 12) & 0b1111) as u8) }
+    }
+
+    #[inline(always)]
+    pub fn is_capture(self) -> bool {
+        ((self.0 >> 16) & 1) != 0
+    }
+}
 
 pub struct UnMakeMove {
     bitboards: BitBoards,
@@ -84,22 +119,22 @@ impl UnMakeMove {
     }
 }
 
-impl Move {
-    pub fn new(
-        from: u64,
-        to: u64,
-        capture: bool,
-        piece_type: PieceType,
-        captured_piece: Option<PieceType>,
-    ) -> Move {
-        return Move {
-            from,
-            to,
-            capture,
-            piece_type,
-        };
-    }
-} //
+// impl Move {
+//     pub fn new(
+//         from: u64,
+//         to: u64,
+//         capture: bool,
+//         piece_type: PieceType,
+//         captured_piece: Option<PieceType>,
+//     ) -> Move {
+//         return Move {
+//             from,
+//             to,
+//             capture,
+//             piece_type,
+//         };
+//     }
+// } //
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
 pub struct BitBoard(u64);
@@ -204,7 +239,7 @@ impl BitBoards {
             PieceType::BlackQueen => self.black_queens.0,
             PieceType::BlackKing => self.black_king.0,
         }
-    }//
+    } //
 } //
 
 #[derive(PartialEq, Eq, Debug, Clone, Copy)]

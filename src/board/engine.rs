@@ -173,8 +173,8 @@ impl Board {
 
         // let mut moves = self.generate_moves();
 
-        let iter = moves.iter().filter(|m| m.capture)
-                                                .chain(moves.iter().filter(|m| !m.capture));
+        let iter = moves.iter().filter(|m| m.is_capture())
+                                                .chain(moves.iter().filter(|m| !m.is_capture()));
 
 
         match self.turn {

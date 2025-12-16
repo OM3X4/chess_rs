@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
 use super::zobrist::{Z_PIECE, Z_SIDE};
-use super::{Board, GameState, Move, PieceType, TTEntry, TranspositionTable, Turn};
+use super::{Board, GameState, Move, PieceType, TTEntry, TranspositionTable, Turn };
 
 impl TranspositionTable {
     pub fn new(size_pow2: usize) -> Self {
@@ -147,6 +147,7 @@ impl Board {
         mut beta: i32,
         tt: &mut TranspositionTable,
     ) -> i32 {
+
         const MAX_DEPTH: i32 = 8;
         let remaining_depth = (MAX_DEPTH - depth) as i8;
 
@@ -290,6 +291,7 @@ mod test {
         use super::Board;
         use super::TranspositionTable;
         use std::collections::HashMap;
+
 
         let mut board = Board::new();
         board.load_from_fen("1rbk1bnr/pp3ppp/1Pp1p3/3p1P2/5N1q/2NQ2P1/1PP1P2P/R1B1KB1R w ");

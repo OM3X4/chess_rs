@@ -1,8 +1,9 @@
 pub mod board;
 mod constants;
 mod engine;
-mod move_gen;
+pub mod move_gen;
 mod zobrist;
+pub mod rook_magic;
 
 pub use board::Board;
 

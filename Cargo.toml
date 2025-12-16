@@ -23,3 +23,7 @@ path = "src/bin/minimax.rs"
 name = "py_api"
 path = "src/bin/py_api.rs"
 
+[[bin]]
+name = "magics"
+path = "src/bin/test_magics.rs"
+

@@ -1,4 +1,5 @@
 use crate::board::UnMakeMove;
+use crate::board::rook_magic::rook_attacks;
 
 use super::constants::{
     BLACK_PAWN_ATTACKS, KING_ATTACK_TABLE, KNIGHTS_ATTACK_TABLE, SQUARE_RAYS, WHITE_PAWN_ATTACKS,
@@ -7,7 +8,7 @@ use super::constants::{FILE_A, FILE_H, RANK_2, RANK_7};
 use super::zobrist::{Z_PIECE, Z_SIDE};
 use super::{Board, Move, PieceType, Turn};
 
-fn extract_bits(bitboard: u64) -> Vec<u64> {
+pub fn extract_bits(bitboard: u64) -> Vec<u64> {
     let mut res: Vec<u64> = Vec::new();
     let mut bb = bitboard;
     while bb != 0 {
@@ -239,6 +240,37 @@ impl Board {
             }
         }
     } //
+
+    pub fn generate_rook_moves_magics(&self) {
+        let allay = self.get_allay_pieces().0;
+        let enemy = self.get_enemy_pieces().0;
+        let occupied = self.occupied.0;
+
+        let (mut rooks, piece_type) = match self.turn {
+            Turn::WHITE => (self.bitboards.white_rooks.0, PieceType::WhiteRook),
+            Turn::BLACK => (self.bitboards.black_rooks.0, PieceType::BlackRook),
+        };
+
+        // let mut add = |from: u64, to: u64, capture: bool| {
+        //     moves.push(Move::new(from, to, capture, piece_type, None));
+        // };
+
+        while rooks != 0 {
+            let from = rooks.trailing_zeros() as u64;
+            rooks &= rooks - 1;
+
+            let attacks_bb = rook_attacks(from as usize, occupied);
+            let mut attacks = attacks_bb & !allay;
+
+            while attacks != 0 {
+                let to = attacks.trailing_zeros() as u64;
+                attacks &= attacks - 1;
+                let capture = (enemy & to) != 0;
+                // add(from, to, capture);
+            }
+        }
+    }//
+
 
     pub fn generate_bishop_moves(&self, moves: &mut Vec<Move>) {
         let allay_bits = &self.get_allay_pieces();
@@ -836,7 +868,6 @@ impl Board {
         let from = mv.from as usize;
         let to = mv.to as usize;
 
-
         let occupied = self.occupied.0;
 
         // The Object Needed to unmake the move
@@ -963,7 +994,6 @@ impl Board {
         self.switch_turn();
         self.hash ^= *Z_SIDE;
 
-
         // let computed = self.compute_hash();
         // if computed != self.hash {
         //     let diff = computed ^ self.hash;
@@ -1028,5 +1058,13 @@ mod test {
             let nodes = board.perft(depth);
             println!("Perft depth {}: {}", depth, nodes);
         }
+    }
+
+    #[test]
+    fn test_rook_magic(){
+        let mut board = Board::new();
+        board.load_from_fen("1rbk1bnr/pp3ppp/1Pp1p3/3p1P2/5N1q/2NQ2P1/1PP1P2P/R1B1KB1R w");
+        let attacks = rook_attacks(0, board.occupied.0);
+        dbg!(extract_bits(attacks));
     }
 }

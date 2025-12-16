@@ -1,5 +1,4 @@
 use crate::board::UnMakeMove;
-use crate::board::bishop_magic::bishop_attacks;
 use crate::board::rook_magic::rook_attacks;
 
 use super::constants::{
@@ -21,7 +20,7 @@ pub fn extract_bits(bitboard: u64) -> Vec<u64> {
 }
 
 impl Board {
-    pub fn generate_knight_moves(&self, moves: &mut Vec<Move>) {
+    pub fn generate_knight_moves(&self) {
         // let mut moves = Vec::new();
         let enemy_bits = self.get_enemy_pieces().0;
         let allay_bits = self.get_allay_pieces().0;
@@ -40,12 +39,12 @@ impl Board {
                 let to = attacks.trailing_zeros() as u64;
                 attacks &= attacks - 1;
                 let capture = (enemy_bits & to) != 0;
-                moves.push(Move::new(from as u8, to as u8, piece_type, capture));
+                // moves.push(Move::new(from as u8, to as u8, piece_type, capture));
             }
         }
     } //
 
-    pub fn generate_king_moves(&self, moves: &mut Vec<Move>) {
+    pub fn generate_king_moves(&self) {
         // let mut moves = Vec::new();
         let enemy_bits = self.get_enemy_pieces().0;
         let allay_bits = self.get_allay_pieces().0;
@@ -66,23 +65,18 @@ impl Board {
             let to = attacks.trailing_zeros() as u64;
             attacks &= attacks - 1;
             let capture = (enemy_bits & to) != 0;
-            moves.push(Move::new(from as u8, to as u8, piece_type, capture));
+            // moves.push(Move::new(from as u8, to as u8, piece_type, capture));
         }
     } //
 
-    pub fn generate_white_pawns_moves(&self, moves: &mut Vec<Move>) {
+    pub fn generate_white_pawns_moves(&self) {
         let blockers = self.occupied.0;
         // let pawn_squares = &self.bitboards.white_pawns;
 
         let enemy_pieces_bb = self.get_all_black_bits();
 
         let mut add = |from: u64, to: u64, capture: bool| {
-            moves.push(Move::new(
-                from as u8,
-                to as u8,
-                PieceType::WhitePawn,
-                capture,
-            ));
+            // moves.push(Move::new(from as u8, to as u8, PieceType::WhitePawn, capture));
         };
 
         let mut pawns = self.bitboards.white_pawns.0;
@@ -112,17 +106,12 @@ impl Board {
         }
     } //
 
-    pub fn generate_black_pawns_moves(&self, moves: &mut Vec<Move>) {
+    pub fn generate_black_pawns_moves(&self) {
         let blockers = self.get_all_white_bits().0 | self.get_all_black_bits().0;
         let enemy_pieces_bb = self.get_all_white_bits();
 
         let mut add = |from: u64, to: u64, capture: bool| {
-            moves.push(Move::new(
-                from as u8,
-                to as u8,
-                PieceType::BlackPawn,
-                capture,
-            ));
+            // moves.push(Move::new(from as u8, to as u8, PieceType::BlackPawn, capture));
         };
 
         let mut pawns = self.bitboards.black_pawns.0;
@@ -240,7 +229,7 @@ impl Board {
         }
     } //
 
-    pub fn generate_rook_moves_magics(&self, moves: &mut Vec<Move>) {
+    pub fn generate_rook_moves_magics(&self) {
         let allay = self.get_allay_pieces().0;
         let enemy = self.get_enemy_pieces().0;
         let occupied = self.occupied.0;
@@ -251,7 +240,7 @@ impl Board {
         };
 
         let mut add = |from: u64, to: u64, capture: bool| {
-            moves.push(Move::new(from as u8, to as u8, piece_type, capture));
+            // moves.push(Move::new(from as u8, to as u8, piece_type, capture));
         };
 
         while rooks != 0 {
@@ -268,9 +257,10 @@ impl Board {
                 add(from, to, capture);
             }
         }
-    } //
+    }//
 
-    pub fn generate_bishop_moves(&self, moves: &mut Vec<Move>) {
+
+    pub fn generate_bishop_moves(&self) {
         let allay_bits = &self.get_allay_pieces();
         let enemy_bits = &self.get_enemy_pieces();
         let all_bits = &self.occupied.0;
@@ -281,7 +271,7 @@ impl Board {
         };
 
         let mut add = |from: u64, to: u64, capture: bool| {
-            moves.push(Move::new(from as u8, to as u8, piece_type, capture));
+            // moves.push(Move::new(from as u8, to as u8, piece_type, capture));
         };
 
         while bishops != 0 {
@@ -365,38 +355,8 @@ impl Board {
             };
         }
     } //
-    pub fn generate_bishop_moves_magics(&self, moves: &mut Vec<Move>) {
-        let allay_bits = self.get_allay_pieces();
-        let enemy_bits = self.get_enemy_pieces();
-        let all_bits = self.occupied.0;
 
-        let (mut bishops, piece_type) = match self.turn {
-            Turn::WHITE => (self.bitboards.white_bishops.0, PieceType::WhiteBishop),
-            Turn::BLACK => (self.bitboards.black_bishops.0, PieceType::BlackBishop),
-        };
-
-        let mut add = |from: u64, to: u64, capture: bool| {
-            moves.push(Move::new(from as u8, to as u8, piece_type, capture));
-        };
-
-        while bishops != 0 {
-            let from = bishops.trailing_zeros() as u64;
-            bishops &= bishops - 1;
-
-            let attacks_bb = bishop_attacks(from as usize, all_bits);
-            let mut attacks = attacks_bb & !allay_bits.0;
-
-            while attacks != 0 {
-                let to = attacks.trailing_zeros() as u64;
-                attacks &= attacks - 1;
-                let capture = (enemy_bits.0 & to) != 0;
-                add(from, to, capture);
-            }
-        }
-
-    } //
-
-    pub fn generate_queen_moves(&self, moves: &mut Vec<Move>) {
+    pub fn generate_queen_moves(&self) {
         let allay_bits = &self.get_allay_pieces();
         let enemy_bits = &self.get_enemy_pieces();
         let occupied = self.occupied.0;
@@ -407,7 +367,7 @@ impl Board {
         };
 
         let mut add = |from: u64, to: u64, capture: bool| {
-            moves.push(Move::new(from as u8, to as u8, piece_type, capture));
+            // moves.push(Move::new(from as u8, to as u8, piece_type, capture));
         };
 
         while queen_bits != 0 {
@@ -686,21 +646,10 @@ impl Board {
 
         // all_locations & sliders != 0
         false
-    }//
-
-    pub fn is_check_by_rook(&self, king_bb: u64, sliders: u64) -> bool {
-        let occupied = self.occupied.0;
-
-        let from = king_bb.trailing_zeros() as u64;
-
-        let attacks_bb = rook_attacks(from as usize, occupied);
-        let attacks = attacks_bb & sliders;
-
-        return attacks != 0;
-    }//
+    }
 
     #[inline(always)]
-    pub fn is_check_by_rook_old(&self, king_bb: u64, sliders: u64) -> bool {
+    pub fn is_check_by_rook(&self, king_bb: u64, sliders: u64) -> bool {
         let occ = self.occupied.0;
         let k = king_bb.trailing_zeros() as i32;
         let rank = k & 56;
@@ -759,16 +708,16 @@ impl Board {
     } //
 
     pub fn generate_pesudo_moves(&self, mut moves: &mut Vec<Move>) {
-        self.generate_knight_moves(&mut moves);
-        self.generate_bishop_moves(&mut moves);
+        self.generate_knight_moves();
+        self.generate_bishop_moves();
         // self.generate_rook_moves(&mut moves);
-        self.generate_rook_moves(&mut moves);
-        self.generate_queen_moves(&mut moves);
-        self.generate_king_moves(&mut moves);
+        self.generate_rook_moves_magics();
+        self.generate_queen_moves();
+        self.generate_king_moves();
 
         match self.turn {
-            Turn::WHITE => self.generate_white_pawns_moves(&mut moves),
-            Turn::BLACK => self.generate_black_pawns_moves(&mut moves),
+            Turn::WHITE => self.generate_white_pawns_moves(),
+            Turn::BLACK => self.generate_black_pawns_moves(),
         };
     } //
 
@@ -803,8 +752,7 @@ impl Board {
                     continue;
                 }
             } else {
-                if (1u64 << mv.to())
-                    & (SQUARE_RAYS[king_square] | KNIGHTS_ATTACK_TABLE[king_square])
+                if (1u64 << mv.to()) & (SQUARE_RAYS[king_square] | KNIGHTS_ATTACK_TABLE[king_square])
                     == 0
                     && mv.piece() != king_type
                 {
@@ -1102,7 +1050,7 @@ mod test {
     }
 
     #[test]
-    fn test_rook_magic() {
+    fn test_rook_magic(){
         let mut board = Board::new();
         board.load_from_fen("1rbk1bnr/pp3ppp/1Pp1p3/3p1P2/5N1q/2NQ2P1/1PP1P2P/R1B1KB1R w");
         let attacks = rook_attacks(0, board.occupied.0);

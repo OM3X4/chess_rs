@@ -1,7 +1,10 @@
 use std::collections::HashMap;
 
+use crate::board::bishop_magic::init_bishop_magics;
+use crate::board::rook_magic::init_rook_magics;
+
 use super::zobrist::{Z_PIECE, Z_SIDE};
-use super::{Board, GameState, Move, PieceType, TTEntry, TranspositionTable, Turn };
+use super::{Board, GameState, Move, PieceType, TTEntry, TranspositionTable, Turn};
 
 impl TranspositionTable {
     pub fn new(size_pow2: usize) -> Self {
@@ -35,6 +38,49 @@ impl TranspositionTable {
 }
 
 impl Board {
+    #[inline]
+    pub fn splitmix64(seed: &mut u64) -> u64 {
+        *seed = seed.wrapping_add(0x9E3779B97F4A7C15);
+        let mut z = *seed;
+        z = (z ^ (z >> 30)).wrapping_mul(0xBF58476D1CE4E5B9);
+        z = (z ^ (z >> 27)).wrapping_mul(0x94D049BB133111EB);
+        z ^ (z >> 31)
+    } //
+
+    pub fn compute_hash(&self) -> u64 {
+        let mut h = 0u64;
+
+        for piece in [
+            PieceType::WhitePawn,
+            PieceType::WhiteKnight,
+            PieceType::WhiteBishop,
+            PieceType::WhiteRook,
+            PieceType::WhiteQueen,
+            PieceType::WhiteKing,
+            PieceType::BlackPawn,
+            PieceType::BlackKnight,
+            PieceType::BlackBishop,
+            PieceType::BlackRook,
+            PieceType::BlackQueen,
+            PieceType::BlackKing,
+        ] {
+            let mut bb = self.bitboards.get(piece);
+            let p = piece.piece_index();
+
+            while bb != 0 {
+                let sq = bb.trailing_zeros() as usize;
+                bb &= bb - 1;
+                h ^= Z_PIECE[p][sq];
+            }
+        }
+
+        if self.turn == Turn::BLACK {
+            h ^= *Z_SIDE;
+        }
+
+        h
+    } //
+
     /// The score is turn agnostic , it always returns the score of the white player
     pub fn pieces_score(&self) -> i32 {
         let mut score: i32 = 0;
@@ -146,13 +192,13 @@ impl Board {
         mut alpha: i32,
         mut beta: i32,
         tt: &mut TranspositionTable,
+        count: &mut u128
     ) -> i32 {
-
-        const MAX_DEPTH: i32 = 8;
+        *count += 1;
+        const MAX_DEPTH: i32 = 7;
         let remaining_depth = (MAX_DEPTH - depth) as i8;
 
         if let Some(score) = tt.get(self.hash, (MAX_DEPTH - depth) as i8) {
-            // dbg!("skipped evaluation");
             return score;
         }
         let game_state = self.get_game_state();
@@ -171,11 +217,10 @@ impl Board {
         let mut moves = Vec::new();
         self.generate_pesudo_moves(&mut moves);
 
-        // let mut moves = self.generate_moves();
-
-        let iter = moves.iter().filter(|m| m.is_capture())
-                                                .chain(moves.iter().filter(|m| !m.is_capture()));
-
+        let iter = moves
+            .iter()
+            .filter(|m| m.is_capture())
+            .chain(moves.iter().filter(|m| !m.is_capture()));
 
         match self.turn {
             Turn::WHITE => {
@@ -190,7 +235,7 @@ impl Board {
                         continue;
                     }
 
-                    let score = self.alpha_beta(depth + 1, alpha, beta, tt);
+                    let score = self.alpha_beta(depth + 1, alpha, beta, tt , count);
 
                     self.unmake_move(unmake_move);
 
@@ -216,7 +261,7 @@ impl Board {
                         continue;
                     }
 
-                    let score = self.alpha_beta(depth + 1, alpha, beta, tt);
+                    let score = self.alpha_beta(depth + 1, alpha, beta, tt , count);
 
                     self.unmake_move(unmake_move);
 
@@ -233,48 +278,36 @@ impl Board {
         } //
     } //
 
-    #[inline]
-    pub fn splitmix64(seed: &mut u64) -> u64 {
-        *seed = seed.wrapping_add(0x9E3779B97F4A7C15);
-        let mut z = *seed;
-        z = (z ^ (z >> 30)).wrapping_mul(0xBF58476D1CE4E5B9);
-        z = (z ^ (z >> 27)).wrapping_mul(0x94D049BB133111EB);
-        z ^ (z >> 31)
-    } //
+    pub fn engine(&mut self) -> Move {
+        // init_bishop_magics();
+        // init_rook_magics();
 
-    pub fn compute_hash(&self) -> u64 {
-        let mut h = 0u64;
+        let moves = self.generate_moves();
 
-        for piece in [
-            PieceType::WhitePawn,
-            PieceType::WhiteKnight,
-            PieceType::WhiteBishop,
-            PieceType::WhiteRook,
-            PieceType::WhiteQueen,
-            PieceType::WhiteKing,
-            PieceType::BlackPawn,
-            PieceType::BlackKnight,
-            PieceType::BlackBishop,
-            PieceType::BlackRook,
-            PieceType::BlackQueen,
-            PieceType::BlackKing,
-        ] {
-            let mut bb = self.bitboards.get(piece);
-            let p = piece.piece_index();
+        let mut best_score = i32::MIN;
+        let mut best_move = moves[0];
+        let mut tt = TranspositionTable::new(20);
 
-            while bb != 0 {
-                let sq = bb.trailing_zeros() as usize;
-                bb &= bb - 1;
-                h ^= Z_PIECE[p][sq];
+        let mut count = 0;
+        for mv in moves {
+            let unmake_move = self.make_move(mv);
+
+            let mut score = self.alpha_beta(0, i32::MIN, i32::MAX, &mut tt , &mut count);
+
+            if self.turn == Turn::WHITE {
+                score = -score;
             }
-        }
 
-        if self.turn == Turn::BLACK {
-            h ^= *Z_SIDE;
-        }
+            if score > best_score {
+                best_score = score;
+                best_move = mv;
+            }
 
-        h
-    } //
+            self.unmake_move(unmake_move);
+        };
+        dbg!(count);
+        return best_move;
+    }
 }
 
 mod test {
@@ -286,23 +319,16 @@ mod test {
         assert_eq!(board.evaluate(), 0);
     }
 
-    #[test]
-    fn minimax() {
-        use super::Board;
-        use super::TranspositionTable;
-        use std::collections::HashMap;
 
+    #[test]
+    fn generate_move() {
+        use super::Board;
 
         let mut board = Board::new();
-        board.load_from_fen("1rbk1bnr/pp3ppp/1Pp1p3/3p1P2/5N1q/2NQ2P1/1PP1P2P/R1B1KB1R w ");
-        let mut moves_map: HashMap<u64, (i32, i32)> = HashMap::new();
-        let score_minimax = board.minimax(0, &mut moves_map);
-        // let mut moves_map2: HashMap<u64, (i32, i32)> = HashMap::new();
-        let mut tt = TranspositionTable::new(20);
-        let score_alpha_beta = board.alpha_beta(0, i32::MIN, i32::MAX, &mut tt);
-        println!(
-            "minimax: {} , alphabeta: {}",
-            score_minimax, score_alpha_beta
-        );
+        board.load_from_fen("8/7n/3r1B1P/4Nk2/b7/5QB1/pKN1q1Pb/8 b");
+
+        let best_move = board.engine();
+
+        println!("{:?} {:?}", best_move.from() , best_move.to());
     }
 }

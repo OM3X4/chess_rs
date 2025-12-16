@@ -131,18 +131,29 @@ fn rook_mask(square: usize) -> u64 {
     let file = square % 8;
     let mut mask = 0u64;
 
-    for f in 1..7 {
-        if f != file {
-            mask |= 1u64 << (rank * 8 + f);
-        }
+    // north
+    for r in rank + 1..7 {
+        mask |= 1u64 << (r * 8 + file);
     }
-    for r in 1..7 {
-        if r != rank {
-            mask |= 1u64 << (r * 8 + file);
-        }
+
+    // south
+    for r in (1..rank).rev() {
+        mask |= 1u64 << (r * 8 + file);
     }
+
+    // east
+    for f in file + 1..7 {
+        mask |= 1u64 << (rank * 8 + f);
+    }
+
+    // west
+    for f in (1..file).rev() {
+        mask |= 1u64 << (rank * 8 + f);
+    }
+
     mask
 }
+
 
 /* =========================================================
 SUBSET ENUMERATION

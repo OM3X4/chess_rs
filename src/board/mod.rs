@@ -3,7 +3,9 @@ mod constants;
 mod engine;
 pub mod move_gen;
 pub mod rook_magic;
+pub mod bishop_magic;
 mod zobrist;
+
 
 pub use board::Board;
 
@@ -118,23 +120,6 @@ impl UnMakeMove {
         }
     }
 }
-
-// impl Move {
-//     pub fn new(
-//         from: u64,
-//         to: u64,
-//         capture: bool,
-//         piece_type: PieceType,
-//         captured_piece: Option<PieceType>,
-//     ) -> Move {
-//         return Move {
-//             from,
-//             to,
-//             capture,
-//             piece_type,
-//         };
-//     }
-// } //
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
 pub struct BitBoard(u64);

@@ -264,30 +264,19 @@ impl Board {
         let enemy = self.get_enemy_pieces().0;
         let occupied = self.occupied.0;
 
-        let (mut rooks, base_piece_type) = match self.turn {
+        let (mut rooks, piece_type) = match self.turn {
             Turn::WHITE => (
-                self.bitboards.white_rooks.0 | self.bitboards.white_queens.0,
+                self.bitboards.white_rooks.0,
                 PieceType::WhiteRook,
             ),
             Turn::BLACK => (
-                self.bitboards.black_rooks.0 | self.bitboards.black_queens.0,
+                self.bitboards.black_rooks.0,
                 PieceType::BlackRook,
             ),
         };
 
         while rooks != 0 {
             let from = rooks.trailing_zeros() as u64;
-            let piece_type = if (self.bitboards.white_queens.0 | self.bitboards.black_queens.0)
-                & (1u64 << from)
-                != 0
-            {
-                match self.turn {
-                    Turn::WHITE => PieceType::WhiteQueen,
-                    Turn::BLACK => PieceType::BlackQueen,
-                }
-            } else {
-                base_piece_type
-            };
             rooks &= rooks - 1;
 
             let attacks_bb = rook_attacks(from as usize, occupied);
@@ -300,6 +289,33 @@ impl Board {
                 moves.push(Move::new(from as u8, to as u8, piece_type, capture));
             }
         }
+
+        let (mut queens, piece_type) = match self.turn {
+            Turn::WHITE => (
+                self.bitboards.white_queens.0,
+                PieceType::WhiteQueen,
+            ),
+            Turn::BLACK => (
+                self.bitboards.black_queens.0,
+                PieceType::BlackQueen,
+            ),
+        };
+
+        while queens != 0 {
+            let from = queens.trailing_zeros() as u64;
+            queens &= queens - 1;
+
+            let attacks_bb = rook_attacks(from as usize, occupied);
+            let mut attacks = attacks_bb & !allay;
+
+            while attacks != 0 {
+                let to = attacks.trailing_zeros() as u64;
+                attacks &= attacks - 1;
+                let capture = (enemy & (1u64 << to)) != 0;
+                moves.push(Move::new(from as u8, to as u8, piece_type, capture));
+            }
+        }
+
     } //
 
     pub fn generate_bishop_moves(&self, moves: &mut Vec<Move>) {
@@ -419,31 +435,34 @@ impl Board {
         let enemy_bits = self.get_enemy_pieces();
         let all_bits = self.occupied.0;
 
-        let (mut bishops, base_piece_type) = match self.turn {
-            Turn::WHITE => (
-                self.bitboards.white_bishops.0 | self.bitboards.white_queens.0,
-                PieceType::WhiteBishop,
-            ),
-            Turn::BLACK => (
-                self.bitboards.black_bishops.0 | self.bitboards.black_queens.0,
-                PieceType::BlackBishop,
-            ),
+        let (mut bishops, piece_type) = match self.turn {
+            Turn::WHITE => (self.bitboards.white_bishops.0, PieceType::WhiteBishop),
+            Turn::BLACK => (self.bitboards.black_bishops.0, PieceType::BlackBishop),
         };
 
         while bishops != 0 {
             let from = bishops.trailing_zeros() as u64;
-            let piece_type = if (self.bitboards.white_queens.0 | self.bitboards.black_queens.0)
-                & (1u64 << from)
-                != 0
-            {
-                match self.turn {
-                    Turn::WHITE => PieceType::WhiteQueen,
-                    Turn::BLACK => PieceType::BlackQueen,
-                }
-            } else {
-                base_piece_type
-            };
             bishops &= bishops - 1;
+
+            let attacks_bb = bishop_attacks(from as usize, all_bits);
+            let mut attacks = attacks_bb & !allay_bits.0;
+
+            while attacks != 0 {
+                let to = attacks.trailing_zeros() as u64;
+                attacks &= attacks - 1;
+                let capture = (enemy_bits.0 & (1u64 << to)) != 0;
+                moves.push(Move::new(from as u8, to as u8, piece_type, capture));
+            }
+        }
+
+        let (mut queens, piece_type) = match self.turn {
+            Turn::WHITE => (self.bitboards.white_queens.0, PieceType::WhiteQueen),
+            Turn::BLACK => (self.bitboards.black_queens.0, PieceType::BlackQueen),
+        };
+
+        while queens != 0 {
+            let from = queens.trailing_zeros() as u64;
+            queens &= queens - 1;
 
             let attacks_bb = bishop_attacks(from as usize, all_bits);
             let mut attacks = attacks_bb & !allay_bits.0;
@@ -821,8 +840,8 @@ impl Board {
 
     pub fn generate_pesudo_moves(&self, mut moves: &mut Vec<Move>) {
         self.generate_knight_moves(&mut moves);
-        self.generate_bishop_moves(&mut moves);
-        self.generate_rook_moves(&mut moves);
+        self.generate_bishop_moves_magics(&mut moves);
+        self.generate_rook_moves_magics(&mut moves);
         self.generate_king_moves(&mut moves);
         // self.generate_queen_moves(&mut moves);
 

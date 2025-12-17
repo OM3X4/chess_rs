@@ -1,5 +1,5 @@
-use std::collections::HashMap;
 use smallvec::SmallVec;
+use std::collections::HashMap;
 
 use super::zobrist::{Z_PIECE, Z_SIDE};
 use super::{Board, GameState, Move, PieceType, TTEntry, TranspositionTable, Turn};
@@ -32,6 +32,20 @@ impl TranspositionTable {
     pub fn put(&mut self, key: u64, depth: i8, score: i32) {
         let idx = self.index(key);
         self.table[idx] = Some(TTEntry { key, depth, score });
+    }
+}
+
+fn partition_by_bool<T>(v: &mut [T], pred: impl Fn(&T) -> bool) {
+    let mut left = 0;
+    let mut right = v.len();
+
+    while left < right {
+        if pred(&v[left]) {
+            left += 1;
+        } else {
+            right -= 1;
+            v.swap(left, right);
+        }
     }
 }
 
@@ -190,7 +204,7 @@ impl Board {
         mut alpha: i32,
         mut beta: i32,
         tt: &mut TranspositionTable,
-        count: &mut u128
+        count: &mut u128,
     ) -> i32 {
         *count += 1;
         const MAX_DEPTH: i32 = 9;
@@ -215,12 +229,15 @@ impl Board {
         let mut moves = SmallVec::new();
         self.generate_pesudo_moves(&mut moves);
 
-        moves.sort_by(|a, b| b.is_capture().cmp(&a.is_capture()));
+        let iter = moves
+            .iter()
+            .filter(|m| m.is_capture())
+            .chain(moves.iter().filter(|m| !m.is_capture()));
 
         match self.turn {
             Turn::WHITE => {
                 let mut best_score = i32::MIN;
-                for mv in &moves {
+                for mv in iter {
                     let unmake_move = self.make_move(*mv);
 
                     let is_illegal_move = self.is_king_in_check(self.opposite_turn());
@@ -230,7 +247,7 @@ impl Board {
                         continue;
                     }
 
-                    let score = self.alpha_beta(depth + 1, alpha, beta, tt , count);
+                    let score = self.alpha_beta(depth + 1, alpha, beta, tt, count);
 
                     self.unmake_move(unmake_move);
 
@@ -246,7 +263,7 @@ impl Board {
             } //
             Turn::BLACK => {
                 let mut best_score = i32::MAX;
-                for mv in &moves {
+                for mv in iter {
                     let unmake_move = self.make_move(*mv);
 
                     let is_illegal_move = self.is_king_in_check(self.opposite_turn());
@@ -256,7 +273,7 @@ impl Board {
                         continue;
                     }
 
-                    let score = self.alpha_beta(depth + 1, alpha, beta, tt , count);
+                    let score = self.alpha_beta(depth + 1, alpha, beta, tt, count);
 
                     self.unmake_move(unmake_move);
 
@@ -277,17 +294,18 @@ impl Board {
         // init_bishop_magics();
         // init_rook_magics();
 
-        let moves = self.generate_moves();
+        let mut moves = self.generate_moves();
+        partition_by_bool(&mut moves, |mv| mv.is_capture());
 
         let mut best_score = i32::MIN;
         let mut best_move = moves[0];
         let mut tt = TranspositionTable::new(20);
 
         let mut count = 0;
-        for mv in moves {
-            let unmake_move = self.make_move(mv);
+        for mv in &moves {
+            let unmake_move = self.make_move(*mv);
 
-            let mut score = self.alpha_beta(0, i32::MIN, i32::MAX, &mut tt , &mut count);
+            let mut score = self.alpha_beta(0, i32::MIN, i32::MAX, &mut tt, &mut count);
 
             if self.turn == Turn::WHITE {
                 score = -score;
@@ -295,11 +313,11 @@ impl Board {
 
             if score > best_score {
                 best_score = score;
-                best_move = mv;
+                best_move = *mv;
             }
 
             self.unmake_move(unmake_move);
-        };
+        }
         dbg!(count);
         return best_move;
     }
@@ -314,7 +332,6 @@ mod test {
         assert_eq!(board.evaluate(), 0);
     }
 
-
     #[test]
     fn generate_move() {
         use super::Board;
@@ -324,6 +341,6 @@ mod test {
 
         let best_move = board.engine();
 
-        println!("{:?} {:?}", best_move.from() , best_move.to());
+        println!("{:?} {:?}", best_move.from(), best_move.to());
     }
 }

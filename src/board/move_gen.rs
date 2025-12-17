@@ -850,9 +850,9 @@ impl Board {
         };
     } //
 
-    pub fn generate_moves(&mut self) -> Vec<Move> {
+    pub fn generate_moves(&mut self) -> SmallVec<[Move; 256]> {
         let mut pesudo_moves: SmallVec<[Move; 256]> = SmallVec::new();
-        let mut legal_moves: Vec<Move> = Vec::new();
+        let mut legal_moves: SmallVec<[Move; 256]> = SmallVec::new();
 
         self.generate_pesudo_moves(&mut pesudo_moves);
 

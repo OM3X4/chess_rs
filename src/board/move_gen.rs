@@ -39,7 +39,7 @@ impl Board {
             while attacks != 0 {
                 let to = attacks.trailing_zeros() as u64;
                 attacks &= attacks - 1;
-                let capture = (enemy_bits & to) != 0;
+                let capture = (enemy_bits & (1u64 << to)) != 0;
                 moves.push(Move::new(from as u8, to as u8, piece_type, capture));
             }
         }
@@ -65,7 +65,7 @@ impl Board {
         while attacks != 0 {
             let to = attacks.trailing_zeros() as u64;
             attacks &= attacks - 1;
-            let capture = (enemy_bits & to) != 0;
+            let capture = (enemy_bits & (1u64 << to)) != 0;
             moves.push(Move::new(from as u8, to as u8, piece_type, capture));
         }
     } //
@@ -453,7 +453,7 @@ impl Board {
                 moves.push(Move::new(from as u8, to as u8, piece_type, capture));
             }
         }
-    }
+    }//
 
     pub fn generate_queen_moves(&self, moves: &mut Vec<Move>) {
         let allay_bits = &self.get_allay_pieces();
@@ -821,8 +821,8 @@ impl Board {
         self.generate_knight_moves(&mut moves);
         self.generate_bishop_moves(&mut moves);
         self.generate_rook_moves(&mut moves);
-        // self.generate_queen_moves(&mut moves);
         self.generate_king_moves(&mut moves);
+        // self.generate_queen_moves(&mut moves);
 
         match self.turn {
             Turn::WHITE => self.generate_white_pawns_moves(&mut moves),

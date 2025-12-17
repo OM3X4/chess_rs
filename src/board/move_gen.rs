@@ -21,6 +21,7 @@ pub fn extract_bits(bitboard: u64) -> Vec<u64> {
 }
 
 impl Board {
+    #[inline(always)]
     pub fn generate_knight_moves(&self, moves: &mut Vec<Move>) {
         // let mut moves = Vec::new();
         let enemy_bits = self.get_enemy_pieces().0;
@@ -45,6 +46,7 @@ impl Board {
         }
     } //
 
+    #[inline(always)]
     pub fn generate_king_moves(&self, moves: &mut Vec<Move>) {
         // let mut moves = Vec::new();
         let enemy_bits = self.get_enemy_pieces().0;
@@ -70,6 +72,7 @@ impl Board {
         }
     } //
 
+    #[inline(always)]
     pub fn generate_white_pawns_moves(&self, moves: &mut Vec<Move>) {
         let blockers = self.occupied.0;
         // let pawn_squares = &self.bitboards.white_pawns;
@@ -113,6 +116,7 @@ impl Board {
         }
     } //
 
+    #[inline(always)]
     pub fn generate_black_pawns_moves(&self, moves: &mut Vec<Move>) {
         let blockers = self.occupied.0;
         let enemy_pieces_bb = self.get_all_white_bits();
@@ -153,6 +157,7 @@ impl Board {
         }
     } //
 
+    #[inline(always)]
     pub fn generate_rook_moves(&self, moves: &mut Vec<Move>) {
         let allay = self.get_allay_pieces().0;
         let enemy = self.get_enemy_pieces().0;
@@ -259,20 +264,15 @@ impl Board {
         }
     } //
 
+    #[inline(always)]
     pub fn generate_rook_moves_magics(&self, moves: &mut Vec<Move>) {
         let allay = self.get_allay_pieces().0;
         let enemy = self.get_enemy_pieces().0;
         let occupied = self.occupied.0;
 
         let (mut rooks, piece_type) = match self.turn {
-            Turn::WHITE => (
-                self.bitboards.white_rooks.0,
-                PieceType::WhiteRook,
-            ),
-            Turn::BLACK => (
-                self.bitboards.black_rooks.0,
-                PieceType::BlackRook,
-            ),
+            Turn::WHITE => (self.bitboards.white_rooks.0, PieceType::WhiteRook),
+            Turn::BLACK => (self.bitboards.black_rooks.0, PieceType::BlackRook),
         };
 
         while rooks != 0 {
@@ -291,14 +291,8 @@ impl Board {
         }
 
         let (mut queens, piece_type) = match self.turn {
-            Turn::WHITE => (
-                self.bitboards.white_queens.0,
-                PieceType::WhiteQueen,
-            ),
-            Turn::BLACK => (
-                self.bitboards.black_queens.0,
-                PieceType::BlackQueen,
-            ),
+            Turn::WHITE => (self.bitboards.white_queens.0, PieceType::WhiteQueen),
+            Turn::BLACK => (self.bitboards.black_queens.0, PieceType::BlackQueen),
         };
 
         while queens != 0 {
@@ -315,9 +309,9 @@ impl Board {
                 moves.push(Move::new(from as u8, to as u8, piece_type, capture));
             }
         }
-
     } //
 
+    #[inline(always)]
     pub fn generate_bishop_moves(&self, moves: &mut Vec<Move>) {
         let allay_bits = &self.get_allay_pieces();
         let enemy_bits = &self.get_enemy_pieces();
@@ -430,6 +424,7 @@ impl Board {
             };
         }
     } //
+    #[inline(always)]
     pub fn generate_bishop_moves_magics(&self, moves: &mut Vec<Move>) {
         let allay_bits = self.get_allay_pieces();
         let enemy_bits = self.get_enemy_pieces();
@@ -476,6 +471,7 @@ impl Board {
         }
     } //
 
+    #[inline(always)]
     pub fn generate_queen_moves(&self, moves: &mut Vec<Move>) {
         let allay_bits = &self.get_allay_pieces();
         let enemy_bits = &self.get_enemy_pieces();
@@ -701,7 +697,7 @@ impl Board {
         }
     } //
 
-    #[inline]
+    #[inline(always)]
     pub fn is_check_by_bishop(&self, king_bb: u64, sliders: u64) -> bool {
         let occ = self.occupied.0;
         let k = king_bb.trailing_zeros() as i32;
@@ -768,6 +764,7 @@ impl Board {
         false
     } //
 
+    #[inline(always)]
     pub fn is_check_by_rook(&self, king_bb: u64, sliders: u64) -> bool {
         let occupied = self.occupied.0;
 
@@ -838,6 +835,7 @@ impl Board {
         false
     } //
 
+    #[inline(always)]
     pub fn generate_pesudo_moves(&self, mut moves: &mut Vec<Move>) {
         self.generate_knight_moves(&mut moves);
         self.generate_bishop_moves_magics(&mut moves);
@@ -944,8 +942,7 @@ impl Board {
             return true;
         }
 
-        let is_attacked_by_king =
-            (KING_ATTACK_TABLE[king_square as usize] & enemy_king) != 0;
+        let is_attacked_by_king = (KING_ATTACK_TABLE[king_square as usize] & enemy_king) != 0;
 
         if is_attacked_by_king {
             return true;

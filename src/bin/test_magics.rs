@@ -23,8 +23,8 @@ fn main() {
 
     for _ in 0..10_000_000 {
         // board.generate_rook_moves_magics();
-        let mut moves = Vec::new();
-        board.generate_pesudo_moves(&mut moves);
+        // let mut moves = Vec::new();
+        // board.generate_pesudo_moves(&mut moves);
         // board.generate_moves();
         // board.generate_rook_moves(&mut moves);
     }

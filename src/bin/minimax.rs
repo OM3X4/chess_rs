@@ -2,7 +2,6 @@ fn main() {
     use bishop_magic::init_bishop_magics;
     use chess::board::*;
     use rook_magic::init_rook_magics;
-    use smallvec::{SmallVec , smallvec};
 
     init_bishop_magics();
     init_rook_magics();

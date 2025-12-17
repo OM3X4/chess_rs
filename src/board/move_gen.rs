@@ -1,6 +1,7 @@
 use crate::board::UnMakeMove;
 use crate::board::bishop_magic::bishop_attacks;
 use crate::board::rook_magic::rook_attacks;
+use smallvec::SmallVec;
 
 use super::constants::{
     BLACK_PAWN_ATTACKS, KING_ATTACK_TABLE, KNIGHTS_ATTACK_TABLE, SQUARE_RAYS, WHITE_PAWN_ATTACKS,
@@ -22,7 +23,7 @@ pub fn extract_bits(bitboard: u64) -> Vec<u64> {
 
 impl Board {
     #[inline(always)]
-    pub fn generate_knight_moves(&self, moves: &mut Vec<Move>) {
+    pub fn generate_knight_moves(&self, moves: &mut SmallVec<[Move; 256]>) {
         // let mut moves = Vec::new();
         let enemy_bits = self.get_enemy_pieces().0;
         let allay_bits = self.get_allay_pieces().0;
@@ -47,7 +48,7 @@ impl Board {
     } //
 
     #[inline(always)]
-    pub fn generate_king_moves(&self, moves: &mut Vec<Move>) {
+    pub fn generate_king_moves(&self, moves: &mut SmallVec<[Move; 256]>) {
         // let mut moves = Vec::new();
         let enemy_bits = self.get_enemy_pieces().0;
         let allay_bits = self.get_allay_pieces().0;
@@ -73,7 +74,7 @@ impl Board {
     } //
 
     #[inline(always)]
-    pub fn generate_white_pawns_moves(&self, moves: &mut Vec<Move>) {
+    pub fn generate_white_pawns_moves(&self, moves: &mut SmallVec<[Move; 256]>) {
         let blockers = self.occupied.0;
         // let pawn_squares = &self.bitboards.white_pawns;
 
@@ -117,7 +118,7 @@ impl Board {
     } //
 
     #[inline(always)]
-    pub fn generate_black_pawns_moves(&self, moves: &mut Vec<Move>) {
+    pub fn generate_black_pawns_moves(&self, moves: &mut SmallVec<[Move; 256]>) {
         let blockers = self.occupied.0;
         let enemy_pieces_bb = self.get_all_white_bits();
 
@@ -265,7 +266,7 @@ impl Board {
     } //
 
     #[inline(always)]
-    pub fn generate_rook_moves_magics(&self, moves: &mut Vec<Move>) {
+    pub fn generate_rook_moves_magics(&self, moves: &mut SmallVec<[Move; 256]>) {
         let allay = self.get_allay_pieces().0;
         let enemy = self.get_enemy_pieces().0;
         let occupied = self.occupied.0;
@@ -425,7 +426,7 @@ impl Board {
         }
     } //
     #[inline(always)]
-    pub fn generate_bishop_moves_magics(&self, moves: &mut Vec<Move>) {
+    pub fn generate_bishop_moves_magics(&self, moves: &mut SmallVec<[Move; 256]>) {
         let allay_bits = self.get_allay_pieces();
         let enemy_bits = self.get_enemy_pieces();
         let all_bits = self.occupied.0;
@@ -836,7 +837,7 @@ impl Board {
     } //
 
     #[inline(always)]
-    pub fn generate_pesudo_moves(&self, mut moves: &mut Vec<Move>) {
+    pub fn generate_pesudo_moves(&self, mut moves: &mut SmallVec<[Move; 256]>) {
         self.generate_knight_moves(&mut moves);
         self.generate_bishop_moves_magics(&mut moves);
         self.generate_rook_moves_magics(&mut moves);
@@ -850,7 +851,7 @@ impl Board {
     } //
 
     pub fn generate_moves(&mut self) -> Vec<Move> {
-        let mut pesudo_moves: Vec<Move> = Vec::new();
+        let mut pesudo_moves: SmallVec<[Move; 256]> = SmallVec::new();
         let mut legal_moves: Vec<Move> = Vec::new();
 
         self.generate_pesudo_moves(&mut pesudo_moves);

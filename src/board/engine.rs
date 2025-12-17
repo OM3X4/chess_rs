@@ -1,4 +1,6 @@
 use std::collections::HashMap;
+use smallvec::SmallVec;
+
 use super::zobrist::{Z_PIECE, Z_SIDE};
 use super::{Board, GameState, Move, PieceType, TTEntry, TranspositionTable, Turn};
 
@@ -191,7 +193,7 @@ impl Board {
         count: &mut u128
     ) -> i32 {
         *count += 1;
-        const MAX_DEPTH: i32 = 6;
+        const MAX_DEPTH: i32 = 9;
         let remaining_depth = (MAX_DEPTH - depth) as i8;
 
         if let Some(score) = tt.get(self.hash, (MAX_DEPTH - depth) as i8) {
@@ -210,18 +212,15 @@ impl Board {
         if depth >= MAX_DEPTH {
             return self.evaluate();
         }
-        let mut moves = Vec::new();
+        let mut moves = SmallVec::new();
         self.generate_pesudo_moves(&mut moves);
 
-        let iter = moves
-            .iter()
-            .filter(|m| m.is_capture())
-            .chain(moves.iter().filter(|m| !m.is_capture()));
+        moves.sort_by(|a, b| b.is_capture().cmp(&a.is_capture()));
 
         match self.turn {
             Turn::WHITE => {
                 let mut best_score = i32::MIN;
-                for mv in iter {
+                for mv in &moves {
                     let unmake_move = self.make_move(*mv);
 
                     let is_illegal_move = self.is_king_in_check(self.opposite_turn());
@@ -247,7 +246,7 @@ impl Board {
             } //
             Turn::BLACK => {
                 let mut best_score = i32::MAX;
-                for mv in iter {
+                for mv in &moves {
                     let unmake_move = self.make_move(*mv);
 
                     let is_illegal_move = self.is_king_in_check(self.opposite_turn());

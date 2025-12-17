@@ -10,6 +10,7 @@ rand = "0.9.2"
 tracing = "0.1.43"
 tracing-flame = "0.2.0"
 tracing-subscriber = "0.3.22"
+smallvec = "1.13"
 
 [[bin]]
 name = "test_checkmate"

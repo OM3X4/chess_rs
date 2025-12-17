@@ -1,8 +1,4 @@
 use std::collections::HashMap;
-
-use crate::board::bishop_magic::init_bishop_magics;
-use crate::board::rook_magic::init_rook_magics;
-
 use super::zobrist::{Z_PIECE, Z_SIDE};
 use super::{Board, GameState, Move, PieceType, TTEntry, TranspositionTable, Turn};
 
@@ -195,7 +191,7 @@ impl Board {
         count: &mut u128
     ) -> i32 {
         *count += 1;
-        const MAX_DEPTH: i32 = 7;
+        const MAX_DEPTH: i32 = 6;
         let remaining_depth = (MAX_DEPTH - depth) as i8;
 
         if let Some(score) = tt.get(self.hash, (MAX_DEPTH - depth) as i8) {

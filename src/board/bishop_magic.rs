@@ -1,3 +1,9 @@
+#![allow(dead_code)]
+
+/* =========================================================
+PUBLIC API
+========================================================= */
+
 #[inline(always)]
 pub fn bishop_attacks(square: usize, occupied: u64) -> u64 {
     unsafe {
@@ -30,32 +36,18 @@ pub fn init_bishop_magics() {
     }
 }
 
-fn blockers_from_index(index: usize, bits: &[usize]) -> u64 {
-    let mut blockers = 0u64;
-    for (i, &sq) in bits.iter().enumerate() {
-        if (index >> i) & 1 != 0 {
-            blockers |= 1u64 << sq;
-        }
-    }
-    blockers
-}
-
-fn extract_bits(mask: u64) -> Vec<usize> {
-    let mut bits = Vec::new();
-    let mut m = mask;
-    while m != 0 {
-        let sq = m.trailing_zeros() as usize;
-        bits.push(sq);
-        m &= m - 1;
-    }
-    bits
-}
+/* =========================================================
+INTERNAL STORAGE
+========================================================= */
 
 const BISHOP_ATTACK_TABLE_SIZE: usize = 512;
 
 static mut BISHOP_MASKS: [u64; 64] = [0; 64];
-static mut BISHOP_ATTACKS: [[u64; BISHOP_ATTACK_TABLE_SIZE]; 64] =
-    [[0; BISHOP_ATTACK_TABLE_SIZE]; 64];
+static mut BISHOP_ATTACKS: [[u64; BISHOP_ATTACK_TABLE_SIZE]; 64] = [[0; BISHOP_ATTACK_TABLE_SIZE]; 64];
+
+/* =========================================================
+MAGIC NUMBERS (VERIFIED)
+========================================================= */
 
 const BISHOP_MAGICS: [u64; 64] = [
     0x40040844404084,
@@ -125,51 +117,57 @@ const BISHOP_MAGICS: [u64; 64] = [
 ];
 
 const BISHOP_SHIFTS: [u32; 64] = [
-    58, 59, 59, 59, 59, 59, 59, 58, 59, 59, 59, 59, 59, 59, 59, 59, 59, 59, 57, 57, 57, 57, 59, 59,
-    59, 59, 57, 55, 55, 57, 59, 59, 59, 59, 57, 55, 55, 57, 59, 59, 59, 59, 57, 57, 57, 57, 59, 59,
-    59, 59, 59, 59, 59, 59, 59, 59, 58, 59, 59, 59, 59, 59, 59, 58,
+    58, 59, 59, 59, 59, 59, 59, 58,
+    59, 59, 59, 59, 59, 59, 59, 59,
+    59, 59, 57, 57, 57, 57, 59, 59,
+    59, 59, 57, 55, 55, 57, 59, 59,
+    59, 59, 57, 55, 55, 57, 59, 59,
+    59, 59, 57, 57, 57, 57, 59, 59,
+    59, 59, 59, 59, 59, 59, 59, 59,
+    58, 59, 59, 59, 59, 59, 59, 58,
 ];
+
+/* =========================================================
+MASK GENERATION
+========================================================= */
 
 fn bishop_mask(square: usize) -> u64 {
     let rank = square / 8;
     let file = square % 8;
     let mut mask = 0u64;
 
-    let mut r;
-    let mut f;
-
-    // NE
-    r = rank + 1;
-    f = file + 1;
+    // northeast
+    let mut r = rank + 1;
+    let mut f = file + 1;
     while r < 7 && f < 7 {
         mask |= 1u64 << (r * 8 + f);
         r += 1;
         f += 1;
     }
 
-    // NW
-    r = rank + 1;
-    f = file.wrapping_sub(1);
+    // northwest
+    let mut r = rank + 1;
+    let mut f = file as i32 - 1;
     while r < 7 && f > 0 {
-        mask |= 1u64 << (r * 8 + f);
+        mask |= 1u64 << (r * 8 + f as usize);
         r += 1;
         f -= 1;
     }
 
-    // SE
-    r = rank.wrapping_sub(1);
-    f = file + 1;
+    // southeast
+    let mut r = rank as i32 - 1;
+    let mut f = file + 1;
     while r > 0 && f < 7 {
-        mask |= 1u64 << (r * 8 + f);
+        mask |= 1u64 << (r as usize * 8 + f);
         r -= 1;
         f += 1;
     }
 
-    // SW
-    r = rank.wrapping_sub(1);
-    f = file.wrapping_sub(1);
+    // southwest
+    let mut r = rank as i32 - 1;
+    let mut f = file as i32 - 1;
     while r > 0 && f > 0 {
-        mask |= 1u64 << (r * 8 + f);
+        mask |= 1u64 << (r as usize * 8 + f as usize);
         r -= 1;
         f -= 1;
     }
@@ -178,12 +176,41 @@ fn bishop_mask(square: usize) -> u64 {
 }
 
 
+/* =========================================================
+SUBSET ENUMERATION
+========================================================= */
+
+fn extract_bits(mask: u64) -> Vec<usize> {
+    let mut bits = Vec::new();
+    let mut m = mask;
+    while m != 0 {
+        let sq = m.trailing_zeros() as usize;
+        bits.push(sq);
+        m &= m - 1;
+    }
+    bits
+}
+
+fn blockers_from_index(index: usize, bits: &[usize]) -> u64 {
+    let mut blockers = 0u64;
+    for (i, &sq) in bits.iter().enumerate() {
+        if (index >> i) & 1 != 0 {
+            blockers |= 1u64 << sq;
+        }
+    }
+    blockers
+}
+
+/* =========================================================
+REFERENCE ATTACK GENERATOR (CORRECTNESS)
+========================================================= */
+
 fn bishop_attacks_on_the_fly(square: usize, blockers: u64) -> u64 {
     let mut attacks = 0u64;
     let rank = square / 8;
     let file = square % 8;
 
-    // NE
+    // northeast
     let mut r = rank + 1;
     let mut f = file + 1;
     while r < 8 && f < 8 {
@@ -196,11 +223,11 @@ fn bishop_attacks_on_the_fly(square: usize, blockers: u64) -> u64 {
         f += 1;
     }
 
-    // NW
-    r = rank + 1;
-    f = file.wrapping_sub(1);
-    while r < 8 && f < 8 {
-        let sq = r * 8 + f;
+    // northwest
+    let mut r = rank + 1;
+    let mut f = file as i32 - 1;
+    while r < 8 && f >= 0 {
+        let sq = r * 8 + f as usize;
         attacks |= 1u64 << sq;
         if blockers & (1u64 << sq) != 0 {
             break;
@@ -209,11 +236,11 @@ fn bishop_attacks_on_the_fly(square: usize, blockers: u64) -> u64 {
         f -= 1;
     }
 
-    // SE
-    r = rank.wrapping_sub(1);
-    f = file + 1;
-    while r < 8 && f < 8 {
-        let sq = r * 8 + f;
+    // southeast
+    let mut r = rank as i32 - 1;
+    let mut f = file + 1;
+    while r >= 0 && f < 8 {
+        let sq = r as usize * 8 + f;
         attacks |= 1u64 << sq;
         if blockers & (1u64 << sq) != 0 {
             break;
@@ -222,11 +249,11 @@ fn bishop_attacks_on_the_fly(square: usize, blockers: u64) -> u64 {
         f += 1;
     }
 
-    // SW
-    r = rank.wrapping_sub(1);
-    f = file.wrapping_sub(1);
-    while r < 8 && f < 8 {
-        let sq = r * 8 + f;
+    // southwest
+    let mut r = rank as i32 - 1;
+    let mut f = file as i32 - 1;
+    while r >= 0 && f >= 0 {
+        let sq = r as usize * 8 + f as usize;
         attacks |= 1u64 << sq;
         if blockers & (1u64 << sq) != 0 {
             break;

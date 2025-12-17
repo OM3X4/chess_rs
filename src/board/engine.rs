@@ -220,7 +220,7 @@ impl Board {
         if *count % 1_000_000 == 0 {
             println!("Nodes searched: {}", count);
         }
-        const MAX_DEPTH: i32 = 9;
+        const MAX_DEPTH: i32 = 10;
         let remaining_depth = (MAX_DEPTH - depth) as i8;
 
         if let Some(score) = tt.get(self.hash, (MAX_DEPTH - depth) as i8) {
@@ -307,8 +307,6 @@ impl Board {
     } //
 
     pub fn engine(&mut self) -> Move {
-        // init_bishop_magics();
-        // init_rook_magics();
 
         let mut moves = self.generate_moves();
         partition_by_bool(&mut moves, |mv| mv.is_capture());

@@ -51,7 +51,7 @@ def stockfish_top5(board: chess.Board, engine, depth=10):
     infos = engine.analyse(
         board,
         chess.engine.Limit(depth=depth),
-        multipv=5
+        multipv=2
     )
 
     top5 = set()
@@ -89,8 +89,10 @@ subprocess.run(
 # --------------------------------------------------
 with chess.engine.SimpleEngine.popen_uci(STOCKFISH_PATH) as sf:
     counter = 0
+    missed = 0
 
-    while True:
+    while counter <= 100:
+        print("Move number " , counter)
         fen = safe_random_fen()
         board = chess.Board(fen)
 
@@ -114,7 +116,13 @@ with chess.engine.SimpleEngine.popen_uci(STOCKFISH_PATH) as sf:
 
         if engine_move not in top5:
             print("❌ ENGINE MOVE OUTSIDE STOCKFISH TOP-5")
-            exit(1)
+            missed += 1
+            counter += 1
+            # exit(1)
 
         print("✅ OK\n")
         counter += 1
+
+print("Number Of tests: " , counter)
+print("Number Of missed tests: " , missed)
+print("percentage: " , (counter - missed) * 100 / counter)

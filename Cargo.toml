@@ -41,10 +41,13 @@ name = "test_best_move"
 path = "src/bin/test_best_move.rs"
 
 [[bin]]
-name = "perft"
-path = "src/bin/perft.rs"
+name = "engine_perft"
+path = "src/bin/engine_perft.rs"
 
 [[bin]]
 name = "moves_generation_perft"
 path = "src/bin/moves_generation_perft.rs"
 
+[[bin]]
+name = "perft"
+path = "src/bin/perft.rs"

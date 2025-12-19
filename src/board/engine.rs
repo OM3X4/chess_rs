@@ -4,8 +4,7 @@ use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::{Arc, Mutex};
 use std::thread;
 
-
-use super::constants::{FILES};
+use super::constants::FILES;
 use super::zobrist::{Z_PIECE, Z_SIDE};
 use super::{Board, GameState, Move, PieceType, TTEntry, TranspositionTable, Turn};
 
@@ -374,7 +373,7 @@ impl Board {
             scored.push((score, *mv));
 
             self.unmake_move(unmake_move);
-        };
+        }
 
         scored.sort_by(|a, b| b.0.partial_cmp(&a.0).unwrap());
 
@@ -481,6 +480,40 @@ impl Board {
             self.engine_singlethread(max_depth)
         }
     } //
+
+    pub fn perft(&mut self, depth: i32 , max_depth: i32) -> i64 {
+        if depth == max_depth {
+            return 1;
+        }
+
+        let mut moves = SmallVec::new();
+        self.generate_pesudo_moves(&mut moves);
+
+        // println!("{} || {} , {}", self.to_fen() , depth, moves.len());
+
+        if moves.is_empty() {
+            return 1;
+        }
+
+        let mut nodes = 0;
+
+        for mv in moves {
+            // let before = self.clone();
+            let unmake = self.make_move(mv);
+
+            if self.is_king_in_check(self.opposite_turn()) {
+                self.unmake_move(unmake);
+                continue;
+            }
+
+            nodes += self.perft(depth + 1 , max_depth);
+
+            self.unmake_move(unmake);
+            // assert_eq!(*self, before);
+        }
+
+        nodes
+    } //
 }
 
 mod test {
@@ -513,5 +546,13 @@ mod test {
         // for mv in moves {
         //     println!("{:?} {:?} {:?}", mv.to_uci() ,mv.from(), mv.to());
         // }
+    }
+
+    #[test]
+    fn perft() {
+        use super::Board;
+        let mut board = Board::new();
+        // board.load_from_fen("2kr3r/1pp3pp/p7/2b1np2/P3p1nq/4P3/1P1PBP1P/RNBQK2R w");
+        dbg!(board.perft(0 , 4));
     }
 }

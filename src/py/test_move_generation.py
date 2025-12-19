@@ -78,7 +78,7 @@ except subprocess.CalledProcessError as e:
 
 
 counter = 0
-while counter == 0:
+while True:
     fen = safe_random_fen()
     # fen = "rnb2b1r/pp2kp2/6p1/2p1p1Pp/2P1n3/2QPB2B/qP2KP1P/RN4NR b - - 2 13"
     # fen = "1rb3kr/p2p4/np6/2p1qppp/5PnP/PPPp4/1B2P1KR/RN3BN1 w - - 0 21"

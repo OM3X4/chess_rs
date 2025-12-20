@@ -12,7 +12,7 @@ pub use board::Board;
 pub struct TTEntry {
     pub key: u64,  // full zobrist key
     pub depth: i8, // remaining depth
-    pub score: f32,
+    pub score: i32,
 }
 pub struct TranspositionTable {
     table: Vec<Option<TTEntry>>,

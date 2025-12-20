@@ -25,7 +25,7 @@ impl TranspositionTable {
     }
 
     #[inline(always)]
-    pub fn get(&self, key: u64, depth: i8) -> Option<f32> {
+    pub fn get(&self, key: u64, depth: i8) -> Option<i32> {
         let entry = self.table[self.index(key)]?;
         if entry.key == key && entry.depth >= depth {
             Some(entry.score)
@@ -35,7 +35,7 @@ impl TranspositionTable {
     }
 
     #[inline(always)]
-    pub fn put(&mut self, key: u64, depth: i8, score: f32) {
+    pub fn put(&mut self, key: u64, depth: i8, score: i32) {
         let idx = self.index(key);
         self.table[idx] = Some(TTEntry { key, depth, score });
     }
@@ -149,7 +149,7 @@ impl Board {
     } //
 
     #[inline(always)]
-    pub fn pieces_score(&self) -> f32 {
+    pub fn pieces_score(&self) -> i32 {
         let bbs = &self.bitboards.0;
 
         let white = bbs[0].0.count_ones() as i32 * 1   // pawn
@@ -164,7 +164,7 @@ impl Board {
             + bbs[9].0.count_ones() as i32 * 5
             + bbs[10].0.count_ones() as i32 * 9;
 
-        (white - black) as f32
+        white - black
     }//
 
     pub fn double_rook_bonus(&self) -> f32 {
@@ -187,7 +187,7 @@ impl Board {
         bonus
     } //
 
-    pub fn evaluate(&mut self) -> f32 {
+    pub fn evaluate(&mut self) -> i32 {
         let score = self.pieces_score();
         // score += self.double_rook_bonus();
 
@@ -195,15 +195,15 @@ impl Board {
     } //
 
     //currently only play for white
-    pub fn minimax(&mut self, depth: i32, moves_map: &mut HashMap<u64, (f32, i32)>) -> f32 {
+    pub fn minimax(&mut self, depth: i32, moves_map: &mut HashMap<u64, (i32, i32)>) -> i32 {
         let game_state = self.get_game_state();
         if game_state == GameState::CheckMate {
             match self.turn {
-                Turn::WHITE => return f32::MIN + depth as f32,
-                Turn::BLACK => return f32::MAX - depth as f32,
+                Turn::WHITE => return i32::MIN + depth,
+                Turn::BLACK => return i32::MAX - depth,
             }
         } else if game_state == GameState::StaleMate {
-            return 0.0;
+            return 0;
         }
 
         if depth >= 4 {
@@ -219,7 +219,7 @@ impl Board {
         let moves = self.generate_moves();
         match self.turn {
             Turn::WHITE => {
-                let mut best_score = f32::MIN;
+                let mut best_score = i32::MIN;
                 for mv in moves {
                     let unmake_move = self.make_move(mv);
 
@@ -235,7 +235,7 @@ impl Board {
                 return best_score;
             } //
             Turn::BLACK => {
-                let mut best_score = f32::MAX;
+                let mut best_score = i32::MAX;
                 for mv in moves {
                     let unmake_move = self.make_move(mv);
 
@@ -257,10 +257,10 @@ impl Board {
         &mut self,
         depth: i32,
         max_depth: i32,
-        mut alpha: f32,
-        mut beta: f32,
+        mut alpha: i32,
+        mut beta: i32,
         tt: &mut TranspositionTable,
-    ) -> f32 {
+    ) -> i32 {
         NODE_COUNT.fetch_add(1, Ordering::Relaxed);
 
         let remaining_depth = (max_depth - depth) as i8;
@@ -295,7 +295,7 @@ impl Board {
 
         match self.turn {
             Turn::WHITE => {
-                let mut best_score = f32::MIN;
+                let mut best_score = i32::MIN;
 
                 for mv in iter {
                     let unmake_move = self.make_move(*mv);
@@ -324,9 +324,9 @@ impl Board {
                 // 4. CHECKMATE / STALEMATE (Internal Nodes Only)
                 if !found_legal {
                     if self.is_king_in_check(self.turn) {
-                        return f32::MIN + depth as f32; // Checkmate (White loses)
+                        return i32::MIN + depth; // Checkmate (White loses)
                     } else {
-                        return 0.0; // Stalemate
+                        return 0; // Stalemate
                     }
                 };
 
@@ -335,7 +335,7 @@ impl Board {
             }
 
             Turn::BLACK => {
-                let mut best_score = f32::MAX;
+                let mut best_score = i32::MAX;
 
                 for mv in iter {
                     let unmake_move = self.make_move(*mv);
@@ -361,9 +361,9 @@ impl Board {
 
                 if !found_legal {
                     if self.is_king_in_check(self.turn) {
-                        return f32::MAX - depth as f32; // Checkmate (Black loses)
+                        return i32::MAX - depth; // Checkmate (Black loses)
                     } else {
-                        return 0.0; // Stalemate
+                        return 0; // Stalemate
                     }
                 };
 
@@ -377,13 +377,13 @@ impl Board {
         let mut moves = self.generate_moves();
         partition_by_bool(&mut moves, |mv| mv.is_capture());
 
-        let mut scored: Vec<(f32, Move)> = Vec::new();
+        let mut scored: Vec<(i32, Move)> = Vec::new();
 
         for mv in &moves {
             let unmake_move = self.make_move(*mv);
 
             let mut score =
-                self.alpha_beta(0, 4, f32::MIN, f32::MAX, &mut TranspositionTable::new(20));
+                self.alpha_beta(0, 4, i32::MIN, i32::MAX, &mut TranspositionTable::new(20));
 
             if self.turn == Turn::WHITE {
                 score = -score;
@@ -398,14 +398,14 @@ impl Board {
 
         moves = scored.iter().map(|mv| mv.1).collect();
 
-        let mut best_score = f32::MIN;
+        let mut best_score = i32::MIN;
         let mut best_move = moves[0];
         let mut tt = TranspositionTable::new(20);
 
         for mv in &moves {
             let unmake_move = self.make_move(*mv);
 
-            let mut score = self.alpha_beta(0, max_depth, f32::MIN, f32::MAX, &mut tt);
+            let mut score = self.alpha_beta(0, max_depth, i32::MIN, i32::MAX, &mut tt);
 
             if self.turn == Turn::WHITE {
                 score = -score;
@@ -427,13 +427,13 @@ impl Board {
         let mut moves = self.generate_moves();
         partition_by_bool(&mut moves, |mv| mv.is_capture());
 
-        let mut scored: Vec<(f32, Move)> = Vec::new();
+        let mut scored: Vec<(i32, Move)> = Vec::new();
 
         for mv in &moves {
             let unmake_move = self.make_move(*mv);
 
             let mut score =
-                self.alpha_beta(0, 4, f32::MIN, f32::MAX, &mut TranspositionTable::new(20));
+                self.alpha_beta(0, 4, i32::MIN, i32::MAX, &mut TranspositionTable::new(20));
 
             if self.turn == Turn::WHITE {
                 score = -score;
@@ -448,7 +448,7 @@ impl Board {
 
         moves = scored.iter().map(|mv| mv.1).collect();
 
-        let best = Arc::new(Mutex::new((f32::MIN, moves[0])));
+        let best = Arc::new(Mutex::new((i32::MIN, moves[0])));
 
         let threads = number_of_threads as usize;
         let chunk_size = (moves.len() + threads - 1) / threads;
@@ -467,7 +467,7 @@ impl Board {
                 for mv in chunck {
                     let unmake_move = board.make_move(mv);
 
-                    let mut score = board.alpha_beta(0, max_depth, f32::MIN, f32::MAX, &mut tt);
+                    let mut score = board.alpha_beta(0, max_depth, i32::MIN, i32::MAX, &mut tt);
 
                     if board.turn == Turn::WHITE {
                         score = -score;
@@ -541,7 +541,7 @@ mod test {
     fn is_position_equal() {
         use super::Board;
         let mut board = Board::new();
-        assert_eq!(board.evaluate(), 0.0);
+        assert_eq!(board.evaluate(), 0);
     }
 
     #[test]

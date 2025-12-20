@@ -66,7 +66,7 @@ impl PieceType {
     }
 }
 
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone , Debug)]
 #[repr(transparent)]
 pub struct Move(u32);
 
@@ -117,8 +117,24 @@ impl Move {
         s.push((b'1' + rank_to) as char);
 
         s
+    } //
+    #[inline(always)]
+    pub fn from_uci(uci: &str, piece: PieceType, capture: bool) -> Move {
+        let bytes = uci.as_bytes();
+
+        debug_assert!(bytes.len() >= 4);
+
+        let file_from = bytes[0] - b'a';
+        let rank_from = bytes[1] - b'1';
+        let from = rank_from * 8 + file_from;
+
+        let file_to = bytes[2] - b'a';
+        let rank_to = bytes[3] - b'1';
+        let to = rank_to * 8 + file_to;
+
+        Move::new(from, to, piece, capture)
     }
-}
+} //
 
 pub struct UnMakeMove {
     from: u8,

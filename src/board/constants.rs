@@ -421,3 +421,150 @@ pub const MVV_LVA: [[i32; 6]; 6] = [
     [505,504,503,502,501,500], // Queen
     [605,604,603,602,601,600], // King
 ];
+
+
+pub fn get_book_moves(fen: &str) -> Option<&'static [&'static str]> {
+    match fen {
+        // ==================================================
+        // START
+        // ==================================================
+        "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w" => Some(&[
+            "e2e4",
+            "d2d4",
+        ]),
+
+        // ==================================================
+        // 1. e4
+        // ==================================================
+
+        // 1... e5
+        "rnbqkbnr/pppp1ppp/8/4p3/4P3/8/PPPP1PPP/RNBQKBNR w" => Some(&[
+            "g1f3",
+        ]),
+
+        // 1... c5 (Sicilian)
+        "rnbqkbnr/pp1ppppp/8/2p5/4P3/8/PPPP1PPP/RNBQKBNR w" => Some(&[
+            "g1f3",
+            "d2d4",
+        ]),
+
+        // 1... e6 (French)
+        "rnbqkbnr/pppppp1p/4p3/8/4P3/8/PPPP1PPP/RNBQKBNR w" => Some(&[
+            "d2d4",
+        ]),
+
+        // 1... c6 (Caro-Kann)
+        "rnbqkbnr/pp1ppppp/2p5/8/4P3/8/PPPP1PPP/RNBQKBNR w" => Some(&[
+            "d2d4",
+        ]),
+
+        // ==================================================
+        // e4 e5 mainlines
+        // ==================================================
+
+        // 1.e4 e5 2.Nf3
+        "rnbqkbnr/pppp1ppp/8/4p3/4P3/5N2/PPPP1PPP/RNBQKB1R b" => Some(&[
+            "b8c6",
+            "g8f6",
+        ]),
+
+        // 1.e4 e5 2.Nf3 Nc6
+        "r1bqkbnr/pppp1ppp/2n5/4p3/4P3/5N2/PPPP1PPP/RNBQKB1R w" => Some(&[
+            "f1b5",
+            "f1c4",
+        ]),
+
+        // Ruy Lopez
+        "r1bqkbnr/pppp1ppp/2n5/1B2p3/4P3/5N2/PPPP1PPP/RNBQK2R b" => Some(&[
+            "a7a6",
+        ]),
+
+        // Ruy Lopez main
+        "r1bqkbnr/1ppp1ppp/p1n5/1B2p3/4P3/5N2/PPPP1PPP/RNBQK2R w" => Some(&[
+            "b5a4",
+        ]),
+
+        // Italian Game
+        "r1bqkbnr/pppp1ppp/2n5/4p3/2B1P3/5N2/PPPP1PPP/RNBQK2R b" => Some(&[
+            "f8c5",
+            "g8f6",
+        ]),
+
+        // ==================================================
+        // Sicilian mainline
+        // ==================================================
+
+        // 1.e4 c5 2.Nf3
+        "rnbqkbnr/pp1ppppp/8/2p5/4P3/5N2/PPPP1PPP/RNBQKB1R b" => Some(&[
+            "d7d6",
+            "b8c6",
+        ]),
+
+        // 1.e4 c5 2.d4
+        "rnbqkbnr/pp1ppppp/8/2p5/3PP3/8/PPP2PPP/RNBQKBNR b" => Some(&[
+            "c5d4",
+        ]),
+
+        // Open Sicilian
+        "rnbqkbnr/pp1ppppp/8/8/3pP3/5N2/PPP2PPP/RNBQKB1R b" => Some(&[
+            "b8c6",
+        ]),
+
+        // ==================================================
+        // 1. d4
+        // ==================================================
+
+        // 1... d5
+        "rnbqkbnr/ppp1pppp/8/3p4/3P4/8/PPP1PPPP/RNBQKBNR w" => Some(&[
+            "c2c4",
+            "g1f3",
+        ]),
+
+        // 1... Nf6
+        "rnbqkb1r/pppppppp/5n2/8/3P4/8/PPP1PPPP/RNBQKBNR w" => Some(&[
+            "c2c4",
+        ]),
+
+        // ==================================================
+        // Queen’s Gambit
+        // ==================================================
+
+        // 1.d4 d5 2.c4
+        "rnbqkbnr/ppp1pppp/8/3p4/2PP4/8/PP2PPPP/RNBQKBNR b" => Some(&[
+            "e7e6",
+            "c7c6",
+        ]),
+
+        // QGD
+        "rnbqkbnr/ppp1pppp/4p3/3p4/2PP4/8/PP2PPPP/RNBQKBNR w" => Some(&[
+            "b1c3",
+            "g1f3",
+        ]),
+
+        // Slav
+        "rnbqkbnr/pp2pppp/2p5/3p4/2PP4/8/PP2PPPP/RNBQKBNR w" => Some(&[
+            "g1f3",
+        ]),
+
+        // ==================================================
+        // Indian defenses
+        // ==================================================
+
+        // 1.d4 Nf6 2.c4
+        "rnbqkb1r/pppppppp/5n2/8/2PP4/8/PP2PPPP/RNBQKBNR b" => Some(&[
+            "g7g6",
+            "e7e6",
+        ]),
+
+        // King’s Indian
+        "rnbqkb1r/pppppp1p/5n2/8/2PP4/8/PP2PPPP/RNBQKBNR w" => Some(&[
+            "b1c3",
+            "g1f3",
+        ]),
+
+        // ==================================================
+        // End of book
+        // ==================================================
+        _ => None,
+    }
+}

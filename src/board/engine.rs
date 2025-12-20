@@ -1,12 +1,13 @@
+use rand::prelude::IndexedRandom;
 use smallvec::SmallVec;
 use std::collections::HashMap;
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::{Arc, Mutex};
-use std::thread;
+use std::thread; // Import the trait for random selection
 
-use crate::board::constants::{RANK_1 , RANK_8};
+use crate::board::constants::{RANK_1, RANK_8};
 
-use super::constants::{FILES, MVV_LVA};
+use super::constants::{FILES, MVV_LVA, get_book_moves};
 use super::zobrist::{Z_PIECE, Z_SIDE};
 use super::{Board, GameState, Move, PieceType, TTEntry, TranspositionTable, Turn};
 
@@ -118,6 +119,17 @@ impl Board {
         h
     } //
 
+    /// Returns a random move from the opening book for a given FEN string.
+    /// Returns None if the position is not in the book.
+    pub fn get_random_opening_move(&self) -> Option<&'static str> {
+        // We fetch the slice of available moves
+        let moves = get_book_moves(&self.to_fen())?;
+
+        // We choose a random one
+        let mut rng = rand::rng();
+        moves.choose(&mut rng).copied()
+    } //
+
     /// The score is turn agnostic , it always returns the score of the white player
     pub fn pieces_score_old(&self) -> f32 {
         let mut score: f32 = 0.0;
@@ -188,11 +200,15 @@ impl Board {
 
     #[inline(always)]
     pub fn development_score(&self) -> i32 {
-        let black = (self.bitboards.0[PieceType::BlackBishop.piece_index()].0 | self.bitboards.0[PieceType::BlackKnight.piece_index()].0) & RANK_8;
-        let white = (self.bitboards.0[PieceType::WhiteBishop.piece_index()].0 | self.bitboards.0[PieceType::WhiteKnight.piece_index()].0) & RANK_1;
+        let black = (self.bitboards.0[PieceType::BlackBishop.piece_index()].0
+            | self.bitboards.0[PieceType::BlackKnight.piece_index()].0)
+            & RANK_8;
+        let white = (self.bitboards.0[PieceType::WhiteBishop.piece_index()].0
+            | self.bitboards.0[PieceType::WhiteKnight.piece_index()].0)
+            & RANK_1;
 
         black.count_ones() as i32 - white.count_ones() as i32
-    }
+    } //
 
     pub fn double_rook_bonus(&self) -> f32 {
         let mut bonus: f32 = 0.0;
@@ -215,8 +231,8 @@ impl Board {
     } //
 
     pub fn evaluate(&mut self) -> i32 {
-        let mut score = self.pieces_score();
-        score += self.development_score();
+        let score = self.pieces_score();
+        // score += self.development_score();
 
         return score;
     } //
@@ -244,7 +260,7 @@ impl Board {
         });
 
         // Quiet moves stay untouched
-    }//
+    } //
 
     //currently only play for white
     pub fn minimax(&mut self, depth: i32, moves_map: &mut HashMap<u64, (i32, i32)>) -> i32 {
@@ -342,14 +358,6 @@ impl Board {
         self.sort_by_mvv_lva(&mut moves);
 
         let iter = moves.iter();
-
-        // Move Ordering optimization: Score your moves here!
-        // moves.sort_by(...)
-
-        // let iter = moves
-        //     .iter()
-        //     .filter(|m| m.is_capture())
-        //     .chain(moves.iter().filter(|m| !m.is_capture()));
 
         let mut found_legal = false;
 
@@ -555,6 +563,32 @@ impl Board {
     } //
 
     pub fn engine(&mut self, max_depth: i32, threads: i32) -> Move {
+
+
+        if let Some(uci) = self.get_random_opening_move() {
+            let bytes = uci.as_bytes();
+
+            // Decode squares
+            let file_from = bytes[0] - b'a';
+            let rank_from = bytes[1] - b'1';
+            let from = (rank_from << 3) | file_from;
+
+            let file_to = bytes[2] - b'a';
+            let rank_to = bytes[3] - b'1';
+            let to = (rank_to << 3) | file_to;
+
+            // Get moving piece from board
+            let piece = self.piece_at[from as usize]
+                .expect("Opening book move refers to empty from-square");
+
+            // Detect capture
+            let capture = self.piece_at[to as usize].is_some();
+
+            dbg!("Opening book move: {}", uci);
+
+            return Move::new(from, to, piece, capture);
+        };
+
         if threads > 1 {
             self.engine_multithreaded(max_depth, threads)
         } else {
@@ -616,9 +650,9 @@ mod test {
         init_rook_magics();
 
         let mut board = Board::new();
-        board.load_from_fen("2kr3r/1pp3pp/p7/2b1np2/P3p1nq/4P3/1P1PBP1P/RNBQK2R w");
+        board.load_from_fen("r3k1nr/pp1bbppp/1qn5/2pp4/Q7/P5P1/1PPP1PBP/RNB1K1NR w");
 
-        let best_move = board.engine(7, 8);
+        let best_move = board.engine(8, 1);
 
         println!("{:?}", best_move.to_uci());
         println!("{:?} {:?}", best_move.from(), best_move.to());

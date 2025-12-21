@@ -367,10 +367,12 @@ impl Board {
         mut alpha: i32,
         beta: i32,
         tt: &mut TranspositionTable,
-        is_tt: bool
+        is_tt: bool,
+        is_null_move_pruning: bool,
     ) -> i32 {
         NODE_COUNT.fetch_add(1, Ordering::Relaxed);
 
+        let depth_remaining = max_depth - depth;
         let orig_alpha = alpha;
 
         // if NODE_COUNT.load(Ordering::Relaxed) % 10_000_000 == 0 {
@@ -379,7 +381,7 @@ impl Board {
 
         // 1. TT LOOKUP
         if is_tt {
-            if let Some(score) = tt.probe(self.hash, (max_depth - depth) as i8, alpha, beta) {
+            if let Some(score) = tt.probe(self.hash, depth_remaining as i8, alpha, beta) {
                 SKIP_COUNT.fetch_add(1, Ordering::Relaxed);
                 return score;
             }
@@ -391,6 +393,16 @@ impl Board {
             // tt.put(self.hash, remaining_depth, score);
             // tt.store(self.hash, depth as i8, score, alpha, beta);
             return score;
+        }
+
+        if depth_remaining >= 3 && !self.is_king_in_check(self.turn) && is_null_move_pruning {
+            let r = 2;
+            self.switch_turn();
+            let score = -self.alpha_beta(depth + r + 1 , max_depth, -beta + 1, -beta, tt, false , false);
+            self.switch_turn();
+            if score >= beta {
+                return beta;
+            }
         }
 
         // 3. MOVE GENERATION (Only for internal nodes)
@@ -416,7 +428,7 @@ impl Board {
 
             found_legal = true;
 
-            let score = -self.alpha_beta(depth + 1, max_depth, -beta, -alpha, tt , is_tt);
+            let score = -self.alpha_beta(depth + 1, max_depth, -beta, -alpha, tt, is_tt , is_null_move_pruning);
 
             self.unmake_move(unmake_move);
 
@@ -438,13 +450,19 @@ impl Board {
         };
 
         if is_tt {
-            tt.store(self.hash, (max_depth - depth) as i8, best_score, orig_alpha, beta);
-        }
+            tt.store(
+                self.hash,
+                depth_remaining as i8,
+                best_score,
+                orig_alpha,
+                beta,
+            );
+        };
 
         return best_score;
     } //
 
-    pub fn engine_singlethread(&mut self, max_depth: i32 , is_tt: bool) -> Move {
+    pub fn engine_singlethread(&mut self, max_depth: i32, is_tt: bool , is_null_move_pruning: bool) -> Move {
         let mut moves = self.generate_moves();
         partition_by_bool(&mut moves, |mv| mv.is_capture());
 
@@ -453,7 +471,15 @@ impl Board {
         for mv in &moves {
             let unmake_move = self.make_move(*mv);
 
-            let score = -self.alpha_beta(0, 4, -30_000, 30_000, &mut TranspositionTable::new(20) , is_tt);
+            let score = -self.alpha_beta(
+                0,
+                4,
+                -30_000,
+                30_000,
+                &mut TranspositionTable::new(20),
+                is_tt,
+                is_null_move_pruning
+            );
 
             scored.push((score, *mv));
 
@@ -471,7 +497,7 @@ impl Board {
         for mv in &moves {
             let unmake_move = self.make_move(*mv);
 
-            let score = -self.alpha_beta(0, max_depth, -30_000, 30_000, &mut tt , is_tt);
+            let score = -self.alpha_beta(0, max_depth, -30_000, 30_000, &mut tt, is_tt , is_null_move_pruning);
 
             if score > best_score {
                 best_score = score;
@@ -479,7 +505,7 @@ impl Board {
             }
 
             self.unmake_move(unmake_move);
-        }
+        };
 
         dbg!(SKIP_COUNT.load(Ordering::Relaxed));
         dbg!(NODE_COUNT.load(Ordering::Relaxed));
@@ -496,8 +522,15 @@ impl Board {
         for mv in &moves {
             let unmake_move = self.make_move(*mv);
 
-            let mut score =
-                -self.alpha_beta(0, 4, -30_000, 30_000, &mut TranspositionTable::new(20) , false);
+            let mut score = -self.alpha_beta(
+                0,
+                4,
+                -30_000,
+                30_000,
+                &mut TranspositionTable::new(20),
+                false,
+                false
+            );
 
             if self.turn == Turn::WHITE {
                 score = -score;
@@ -506,7 +539,7 @@ impl Board {
             scored.push((score, *mv));
 
             self.unmake_move(unmake_move);
-        }
+        };
 
         scored.sort_by(|a, b| b.0.partial_cmp(&a.0).unwrap());
 
@@ -531,7 +564,8 @@ impl Board {
                 for mv in chunck {
                     let unmake_move = board.make_move(mv);
 
-                    let mut score = -board.alpha_beta(0, max_depth, -30_000, 30_000, &mut tt , false);
+                    let mut score =
+                        -board.alpha_beta(0, max_depth, -30_000, 30_000, &mut tt, false , false);
 
                     if board.turn == Turn::WHITE {
                         score = -score;
@@ -557,7 +591,7 @@ impl Board {
         return best.lock().unwrap().1.clone();
     } //
 
-    pub fn engine(&mut self, max_depth: i32, threads: i32 , is_tt: bool) -> Move {
+    pub fn engine(&mut self, max_depth: i32, threads: i32, is_tt: bool , is_null_move_pruning: bool) -> Move {
         if let Some(uci) = self.get_random_opening_move() {
             let bytes = uci.as_bytes();
 
@@ -585,7 +619,7 @@ impl Board {
         if threads > 1 {
             self.engine_multithreaded(max_depth, threads)
         } else {
-            self.engine_singlethread(max_depth , is_tt)
+            self.engine_singlethread(max_depth, is_tt , is_null_move_pruning)
         }
     } //
 
@@ -643,12 +677,12 @@ mod test {
         init_rook_magics();
 
         let mut board = Board::new();
-        board.load_from_fen("r1bqk2r/ppppbppp/2n2n2/4p3/N3P3/3B1N2/PPPP1PPP/R1BQK2R w");
+        board.load_from_fen("2b2r2/rp1nb1p1/1q1p1n1k/p1p1Np2/1PQPp3/P1N1P3/2P2PPP/2RK1B1R w");
 
-        let best_move = board.engine(8, 1 , true);
+        let best_move = board.engine(8, 1, true , false);
 
         println!("{:?}", best_move.to_uci());
-        println!("{:?} {:?}", best_move.from(), best_move.to());
+        // println!("{:?} {:?}", best_move.from(), best_move.to());
 
         // let moves = board.generate_moves();
         // for mv in moves {

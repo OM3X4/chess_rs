@@ -17,7 +17,14 @@ fn main() {
     // println!("{}", board.to_fen());
 
     // dbg!(board.turn);
-    let best_move = board.engine(6 , 1 , true);
+    let start = std::time::Instant::now();
+    let best_move = board.engine(9 , 1 , true , true);
+    dbg!(start.elapsed());
+    // let best_move_1 = board.engine(6 , 1 , true , false);
+    // dbg!(best_move_1.to_uci());
+    // assert_eq!(best_move , best_move_1);
+
+
 
     dbg!(best_move.to_uci());
     println!("{:?} {:?}", best_move.from() , best_move.to());

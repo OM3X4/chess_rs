@@ -4,6 +4,7 @@ use std::collections::HashMap;
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::{Arc, Mutex};
 use std::thread; // Import the trait for random selection
+use std::time::Duration;
 
 use crate::board::constants::{RANK_1, RANK_8};
 
@@ -382,7 +383,7 @@ impl Board {
         // 1. TT LOOKUP
         if is_tt {
             if let Some(score) = tt.probe(self.hash, depth_remaining as i8, alpha, beta) {
-                SKIP_COUNT.fetch_add(1, Ordering::Relaxed);
+                // SKIP_COUNT.fetch_add(1, Ordering::Relaxed);
                 return score;
             }
         }
@@ -390,20 +391,20 @@ impl Board {
         // 2. BASE CASE (Optimized)
         if depth >= max_depth {
             let score = self.evaluate();
-            // tt.put(self.hash, remaining_depth, score);
-            // tt.store(self.hash, depth as i8, score, alpha, beta);
             return score;
         }
 
+        // 3. NULL MOVE PRUNING
         if depth_remaining >= 3 && !self.is_king_in_check(self.turn) && is_null_move_pruning {
             let r = 2;
             self.switch_turn();
-            let score = -self.alpha_beta(depth + r + 1 , max_depth, -beta + 1, -beta, tt, false , false);
+            let score =
+                -self.alpha_beta(depth + r + 1, max_depth, -beta + 1, -beta, tt, false, false);
             self.switch_turn();
             if score >= beta {
                 return beta;
             }
-        }
+        };
 
         // 3. MOVE GENERATION (Only for internal nodes)
         let mut moves = SmallVec::new();
@@ -428,7 +429,15 @@ impl Board {
 
             found_legal = true;
 
-            let score = -self.alpha_beta(depth + 1, max_depth, -beta, -alpha, tt, is_tt , is_null_move_pruning);
+            let score = -self.alpha_beta(
+                depth + 1,
+                max_depth,
+                -beta,
+                -alpha,
+                tt,
+                is_tt,
+                is_null_move_pruning,
+            );
 
             self.unmake_move(unmake_move);
 
@@ -462,54 +471,68 @@ impl Board {
         return best_score;
     } //
 
-    pub fn engine_singlethread(&mut self, max_depth: i32, is_tt: bool , is_null_move_pruning: bool) -> Move {
+    pub fn engine_singlethread(
+        &mut self,
+        max_depth: i32,
+        is_tt: bool,
+        is_null_move_pruning: bool,
+        maximum_time: Duration,
+    ) -> Move {
         let mut moves = self.generate_moves();
         partition_by_bool(&mut moves, |mv| mv.is_capture());
 
-        let mut scored: Vec<(i32, Move)> = Vec::new();
+        let start_time = std::time::Instant::now();
 
-        for mv in &moves {
-            let unmake_move = self.make_move(*mv);
-
-            let score = -self.alpha_beta(
-                0,
-                4,
-                -30_000,
-                30_000,
-                &mut TranspositionTable::new(20),
-                is_tt,
-                is_null_move_pruning
-            );
-
-            scored.push((score, *mv));
-
-            self.unmake_move(unmake_move);
-        }
-
-        scored.sort_by(|a, b| b.0.partial_cmp(&a.0).unwrap());
-
-        moves = scored.iter().map(|mv| mv.1).collect();
-
-        let mut best_score = -30_000;
+        let mut searched_depth = 0;
+        let mut best_stable_move = moves[0];
         let mut best_move = moves[0];
         let mut tt = TranspositionTable::new(20);
 
-        for mv in &moves {
-            let unmake_move = self.make_move(*mv);
+        for current_depth in 1..=max_depth {
+            // dbg!(current_depth);
+            let mut alpha = -30_000;
+            let beta = 30_000;
+            let mut best_score = -30_000;
 
-            let score = -self.alpha_beta(0, max_depth, -30_000, 30_000, &mut tt, is_tt , is_null_move_pruning);
+            for mv in &moves {
+                if start_time.elapsed() > maximum_time {
+                    dbg!(searched_depth);
+                    return best_stable_move;
+                }
 
-            if score > best_score {
-                best_score = score;
-                best_move = *mv;
+                let unmake_move = self.make_move(*mv);
+
+                let score = -self.alpha_beta(
+                    0,
+                    current_depth,
+                    -beta,
+                    -alpha,
+                    &mut tt,
+                    is_tt,
+                    is_null_move_pruning,
+                );
+
+                if score > best_score {
+                    best_score = score;
+                    best_move = *mv;
+                }
+
+                alpha = alpha.max(score);
+
+                self.unmake_move(unmake_move);
             }
 
-            self.unmake_move(unmake_move);
-        };
+            if let Some(idx) = moves.iter().position(|m| *m == best_move) {
+                moves.swap(0, idx);
+            };
 
-        dbg!(SKIP_COUNT.load(Ordering::Relaxed));
+            searched_depth = current_depth;
+            best_stable_move = best_move;
+        }
+
+        dbg!(searched_depth);
         dbg!(NODE_COUNT.load(Ordering::Relaxed));
-        return best_move;
+        return best_stable_move;
     } //
 
     pub fn engine_multithreaded(&mut self, max_depth: i32, number_of_threads: i32) -> Move {
@@ -529,7 +552,7 @@ impl Board {
                 30_000,
                 &mut TranspositionTable::new(20),
                 false,
-                false
+                false,
             );
 
             if self.turn == Turn::WHITE {
@@ -539,7 +562,7 @@ impl Board {
             scored.push((score, *mv));
 
             self.unmake_move(unmake_move);
-        };
+        }
 
         scored.sort_by(|a, b| b.0.partial_cmp(&a.0).unwrap());
 
@@ -565,7 +588,7 @@ impl Board {
                     let unmake_move = board.make_move(mv);
 
                     let mut score =
-                        -board.alpha_beta(0, max_depth, -30_000, 30_000, &mut tt, false , false);
+                        -board.alpha_beta(0, max_depth, -30_000, 30_000, &mut tt, false, false);
 
                     if board.turn == Turn::WHITE {
                         score = -score;
@@ -591,7 +614,13 @@ impl Board {
         return best.lock().unwrap().1.clone();
     } //
 
-    pub fn engine(&mut self, max_depth: i32, threads: i32, is_tt: bool , is_null_move_pruning: bool) -> Move {
+    pub fn engine(
+        &mut self,
+        max_depth: i32,
+        threads: i32,
+        is_tt: bool,
+        is_null_move_pruning: bool,
+    ) -> Move {
         if let Some(uci) = self.get_random_opening_move() {
             let bytes = uci.as_bytes();
 
@@ -619,7 +648,12 @@ impl Board {
         if threads > 1 {
             self.engine_multithreaded(max_depth, threads)
         } else {
-            self.engine_singlethread(max_depth, is_tt , is_null_move_pruning)
+            self.engine_singlethread(
+                max_depth,
+                is_tt,
+                is_null_move_pruning,
+                Duration::from_secs(15),
+            )
         }
     } //
 
@@ -677,10 +711,10 @@ mod test {
         init_rook_magics();
 
         let mut board = Board::new();
-        board.load_from_fen("2b2r2/rp1nb1p1/1q1p1n1k/p1p1Np2/1PQPp3/P1N1P3/2P2PPP/2RK1B1R w");
-
-        let best_move = board.engine(8, 1, true , false);
-
+        board.load_from_fen("r1b1k2r/ppq1bppp/2n2n2/2p1p3/8/P1N2N2/1PPPBPPP/R1BQ1K1R w");
+        let start_time = std::time::Instant::now();
+        let best_move = board.engine(8, 1, true, true);
+        dbg!(start_time.elapsed());
         println!("{:?}", best_move.to_uci());
         // println!("{:?} {:?}", best_move.from(), best_move.to());
 

@@ -1,6 +1,6 @@
 fn main() {
     use chess::board::*;
-    let depth = 10;
+    let depth = 12;
     let is_tt = true;
     let is_null_move_pruning = true;
     use bishop_magic::init_bishop_magics;
@@ -11,21 +11,20 @@ fn main() {
 
     // Starting Position
     {
-        let mut board = Board::new();
-        // board.load_from_fen("rnbqkbnr/ppp2ppp/4p3/3p4/2P5/P7/1P1PPPPP/RNBQKBNR w");
-        println!("################################################");
-        println!("################################################");
-        println!("Starting Position:");
-        println!("################################################");
-        println!("################################################\n\n");
+        // let mut board = Board::new();
+        // println!("################################################");
+        // println!("################################################");
+        // println!("Starting Position:");
+        // println!("################################################");
+        // println!("################################################\n\n");
 
-        println!("-------------------------------------------------");
-        println!("Single Threaded Engine:");
-        let start = std::time::Instant::now();
-        let best_move = board.engine(depth , 1 , is_tt , is_null_move_pruning);
-        println!("Time taken: {:?}", start.elapsed());
-        println!("Best Move: {}", best_move.to_uci());
-        println!("-------------------------------------------------\n");
+        // println!("-------------------------------------------------");
+        // println!("Single Threaded Engine:");
+        // let start = std::time::Instant::now();
+        // let best_move = board.engine(depth , 1 , is_tt , is_null_move_pruning);
+        // println!("Time taken: {:?}", start.elapsed());
+        // println!("Best Move: {}", best_move.to_uci());
+        // println!("-------------------------------------------------\n");
 
         // println!("-------------------------------------------------");
         // println!("8 Threads Engine:");

@@ -9,9 +9,10 @@ use crate::board::constants::{RANK_1, RANK_8};
 
 use super::constants::{FILES, MVV_LVA, get_book_moves};
 use super::zobrist::{Z_PIECE, Z_SIDE};
-use super::{Board, GameState, Move, PieceType, TTEntry, TranspositionTable, Turn};
+use super::{Board, Bound, GameState, Move, PieceType, TTEntry, TranspositionTable, Turn};
 
 static NODE_COUNT: AtomicU64 = AtomicU64::new(0);
+static SKIP_COUNT: AtomicU64 = AtomicU64::new(0);
 
 impl TranspositionTable {
     pub fn new(size_pow2: usize) -> Self {
@@ -20,28 +21,61 @@ impl TranspositionTable {
             table: vec![None; size],
             mask: size - 1,
         }
-    }
+    } //
 
     #[inline(always)]
     fn index(&self, key: u64) -> usize {
         (key as usize) & self.mask
-    }
+    } //
 
     #[inline(always)]
-    pub fn get(&self, key: u64, depth: i8) -> Option<i32> {
+    pub fn probe(&self, key: u64, depth: i8, alpha: i32, beta: i32) -> Option<i32> {
         let entry = self.table[self.index(key)]?;
-        if entry.key == key && entry.depth >= depth {
-            Some(entry.score)
-        } else {
-            None
+
+        if entry.key != key || entry.depth < depth {
+            return None;
         }
-    }
+
+        match entry.bound {
+            Bound::Exact => Some(entry.score),
+            Bound::Lower if entry.score >= beta => Some(entry.score),
+            Bound::Upper if entry.score <= alpha => Some(entry.score),
+            _ => None,
+        }
+    } //
 
     #[inline(always)]
-    pub fn put(&mut self, key: u64, depth: i8, score: i32) {
+    pub fn store(&mut self, key: u64, depth: i8, score: i32, alpha: i32, beta: i32) {
+        let bound = if score <= alpha {
+            Bound::Upper
+        } else if score >= beta {
+            Bound::Lower
+        } else {
+            Bound::Exact
+        };
+
         let idx = self.index(key);
-        self.table[idx] = Some(TTEntry { key, depth, score });
-    }
+
+        match self.table[idx] {
+            None => {
+                self.table[idx] = Some(TTEntry {
+                    key,
+                    depth,
+                    score,
+                    bound,
+                });
+            }
+            Some(old) if depth >= old.depth => {
+                self.table[idx] = Some(TTEntry {
+                    key,
+                    depth,
+                    score,
+                    bound,
+                });
+            }
+            _ => {}
+        }
+    } //
 }
 
 fn partition_by_bool<T>(v: &mut [T], pred: impl Fn(&T) -> bool) {
@@ -234,9 +268,12 @@ impl Board {
         let score = self.pieces_score();
         // score += self.development_score();
 
-
         // It returns score relative to the side to play (by default it is white)
-        return if self.turn == Turn::WHITE { score } else { -score };
+        return if self.turn == Turn::WHITE {
+            score
+        } else {
+            -score
+        };
     } //
 
     #[inline(always)]
@@ -330,22 +367,29 @@ impl Board {
         mut alpha: i32,
         beta: i32,
         tt: &mut TranspositionTable,
+        is_tt: bool
     ) -> i32 {
         NODE_COUNT.fetch_add(1, Ordering::Relaxed);
+
+        let orig_alpha = alpha;
 
         // if NODE_COUNT.load(Ordering::Relaxed) % 10_000_000 == 0 {
         //     dbg!("Nodes: {}", NODE_COUNT.load(Ordering::Relaxed));
         // }
 
         // 1. TT LOOKUP
-        // if let Some(score) = tt.get(self.hash, remaining_depth) {
-        //     return score;
-        // }
+        if is_tt {
+            if let Some(score) = tt.probe(self.hash, (max_depth - depth) as i8, alpha, beta) {
+                SKIP_COUNT.fetch_add(1, Ordering::Relaxed);
+                return score;
+            }
+        }
 
         // 2. BASE CASE (Optimized)
         if depth >= max_depth {
             let score = self.evaluate();
             // tt.put(self.hash, remaining_depth, score);
+            // tt.store(self.hash, depth as i8, score, alpha, beta);
             return score;
         }
 
@@ -372,7 +416,7 @@ impl Board {
 
             found_legal = true;
 
-            let score = -self.alpha_beta(depth + 1, max_depth, -beta, -alpha, tt);
+            let score = -self.alpha_beta(depth + 1, max_depth, -beta, -alpha, tt , is_tt);
 
             self.unmake_move(unmake_move);
 
@@ -382,7 +426,7 @@ impl Board {
             if alpha >= beta {
                 break; // Alpha Cutoff
             }
-        };
+        }
 
         if !found_legal {
             if self.is_king_in_check(self.turn) {
@@ -393,10 +437,14 @@ impl Board {
             }
         };
 
+        if is_tt {
+            tt.store(self.hash, (max_depth - depth) as i8, best_score, orig_alpha, beta);
+        }
+
         return best_score;
     } //
 
-    pub fn engine_singlethread(&mut self, max_depth: i32) -> Move {
+    pub fn engine_singlethread(&mut self, max_depth: i32 , is_tt: bool) -> Move {
         let mut moves = self.generate_moves();
         partition_by_bool(&mut moves, |mv| mv.is_capture());
 
@@ -405,17 +453,12 @@ impl Board {
         for mv in &moves {
             let unmake_move = self.make_move(*mv);
 
-            let score =
-                -self.alpha_beta(0, 4, -30_000, 30_000, &mut TranspositionTable::new(20));
-
-            // if self.turn == Turn::WHITE {
-            //     score = -score;
-            // };
+            let score = -self.alpha_beta(0, 4, -30_000, 30_000, &mut TranspositionTable::new(20) , is_tt);
 
             scored.push((score, *mv));
 
             self.unmake_move(unmake_move);
-        };
+        }
 
         scored.sort_by(|a, b| b.0.partial_cmp(&a.0).unwrap());
 
@@ -428,11 +471,7 @@ impl Board {
         for mv in &moves {
             let unmake_move = self.make_move(*mv);
 
-            let score = -self.alpha_beta(0, max_depth, -30_000, 30_000, &mut tt);
-
-            // if self.turn == Turn::WHITE {
-            //     score = -score;
-            // }
+            let score = -self.alpha_beta(0, max_depth, -30_000, 30_000, &mut tt , is_tt);
 
             if score > best_score {
                 best_score = score;
@@ -440,8 +479,9 @@ impl Board {
             }
 
             self.unmake_move(unmake_move);
-        };
+        }
 
+        dbg!(SKIP_COUNT.load(Ordering::Relaxed));
         dbg!(NODE_COUNT.load(Ordering::Relaxed));
         return best_move;
     } //
@@ -457,7 +497,7 @@ impl Board {
             let unmake_move = self.make_move(*mv);
 
             let mut score =
-                -self.alpha_beta(0, 4, -30_000, 30_000, &mut TranspositionTable::new(20));
+                -self.alpha_beta(0, 4, -30_000, 30_000, &mut TranspositionTable::new(20) , false);
 
             if self.turn == Turn::WHITE {
                 score = -score;
@@ -491,7 +531,7 @@ impl Board {
                 for mv in chunck {
                     let unmake_move = board.make_move(mv);
 
-                    let mut score = -board.alpha_beta(0, max_depth, -30_000, 30_000, &mut tt);
+                    let mut score = -board.alpha_beta(0, max_depth, -30_000, 30_000, &mut tt , false);
 
                     if board.turn == Turn::WHITE {
                         score = -score;
@@ -517,7 +557,7 @@ impl Board {
         return best.lock().unwrap().1.clone();
     } //
 
-    pub fn engine(&mut self, max_depth: i32, threads: i32) -> Move {
+    pub fn engine(&mut self, max_depth: i32, threads: i32 , is_tt: bool) -> Move {
         if let Some(uci) = self.get_random_opening_move() {
             let bytes = uci.as_bytes();
 
@@ -545,7 +585,7 @@ impl Board {
         if threads > 1 {
             self.engine_multithreaded(max_depth, threads)
         } else {
-            self.engine_singlethread(max_depth)
+            self.engine_singlethread(max_depth , is_tt)
         }
     } //
 
@@ -605,7 +645,7 @@ mod test {
         let mut board = Board::new();
         board.load_from_fen("r1bqk2r/ppppbppp/2n2n2/4p3/N3P3/3B1N2/PPPP1PPP/R1BQK2R w");
 
-        let best_move = board.engine(8, 1);
+        let best_move = board.engine(8, 1 , true);
 
         println!("{:?}", best_move.to_uci());
         println!("{:?} {:?}", best_move.from(), best_move.to());

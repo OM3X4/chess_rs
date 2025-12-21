@@ -9,20 +9,25 @@ mod zobrist;
 pub use board::Board;
 
 #[derive(Copy, Clone)]
+
 pub struct TTEntry {
-    pub key: u64,  // full zobrist key
+    pub key: u64,  // full zobrist
     pub depth: i8, // remaining depth
-    pub score: i32,
+    pub bound: Bound,
+    pub score: i32,      // normalized score
 }
 pub struct TranspositionTable {
     table: Vec<Option<TTEntry>>,
     mask: usize,
 }
 
+
+#[repr(u8)]
+#[derive(Copy, Clone)]
 pub enum Bound {
-    Upper,
-    Lower,
-    Exact,
+    Exact = 0,
+    Lower = 1,
+    Upper = 2,
 }
 
 const PIECE_VALUE: [i8; 12] = [
@@ -66,7 +71,7 @@ impl PieceType {
     }
 }
 
-#[derive(Copy, Clone , Debug)]
+#[derive(Copy, Clone, Debug , PartialEq, Eq)]
 #[repr(transparent)]
 pub struct Move(u32);
 

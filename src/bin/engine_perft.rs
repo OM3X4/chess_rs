@@ -1,6 +1,7 @@
 fn main() {
     use chess::board::*;
     let depth = 8;
+    let is_tt = true;
     use bishop_magic::init_bishop_magics;
     use rook_magic::init_rook_magics;
 
@@ -20,18 +21,18 @@ fn main() {
         println!("-------------------------------------------------");
         println!("Single Threaded Engine:");
         let start = std::time::Instant::now();
-        let best_move = board.engine(depth , 1);
+        let best_move = board.engine(depth , 1 , true);
         println!("Time taken: {:?}", start.elapsed());
         println!("Best Move: {}", best_move.to_uci());
         println!("-------------------------------------------------\n");
 
-        println!("-------------------------------------------------");
-        println!("8 Threads Engine:");
-        let start = std::time::Instant::now();
-        let best_move = board.engine(depth , 8);
-        println!("Time taken: {:?}", start.elapsed());
-        println!("Best Move: {}", best_move.to_uci());
-        println!("-------------------------------------------------\n");
+        // println!("-------------------------------------------------");
+        // println!("8 Threads Engine:");
+        // let start = std::time::Instant::now();
+        // let best_move = board.engine(depth , 8);
+        // println!("Time taken: {:?}", start.elapsed());
+        // println!("Best Move: {}", best_move.to_uci());
+        // println!("-------------------------------------------------\n");
 
         // println!("-------------------------------------------------");
         // println!("16 Threads Engine:");
@@ -56,7 +57,7 @@ fn main() {
         println!("-------------------------------------------------");
         println!("Single Threaded Engine:");
         let start = std::time::Instant::now();
-        let best_move = board.engine(depth , 1);
+        let best_move = board.engine(depth , 1 , is_tt);
         println!("Time taken: {:?}", start.elapsed());
         println!("Best Move: {}", best_move.to_uci());
         println!("-------------------------------------------------\n");

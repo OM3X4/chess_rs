@@ -258,11 +258,12 @@ impl Board {
 
     #[inline(always)]
     pub fn mvv_lva(&self, mv: Move) -> i32 {
-        if !mv.is_capture() {
+        if !mv.is_capture() || mv.is_en_passant() {
             return 0;
         }
+        let mut victim;
 
-        let victim = self.piece_at[mv.to() as usize].unwrap();
+        victim = self.piece_at[mv.to() as usize].unwrap();
         let attacker = mv.piece();
 
         MVV_LVA[(victim.piece_index() % 6) as usize][(attacker.piece_index() % 6) as usize]
@@ -339,6 +340,48 @@ impl Board {
         let mut best_score = -30_000;
 
         for mv in iter {
+            if mv.is_castling() {
+                match mv.to() {
+                    6 => {
+                        if self.is_square_attacked(6, self.opposite_turn()) {
+                            continue;
+                        } else if self.is_square_attacked(5, self.opposite_turn()) {
+                            continue;
+                        } else if self.is_square_attacked(4, self.opposite_turn()) {
+                            continue;
+                        }
+                    }
+                    2 => {
+                        if self.is_square_attacked(2, self.opposite_turn()) {
+                            continue;
+                        } else if self.is_square_attacked(3, self.opposite_turn()) {
+                            continue;
+                        } else if self.is_square_attacked(4, self.opposite_turn()) {
+                            continue;
+                        }
+                    }
+                    58 => {
+                        if self.is_square_attacked(58, self.opposite_turn()) {
+                            continue;
+                        } else if self.is_square_attacked(59, self.opposite_turn()) {
+                            continue;
+                        } else if self.is_square_attacked(60, self.opposite_turn()) {
+                            continue;
+                        }
+                    }
+                    62 => {
+                        if self.is_square_attacked(62, self.opposite_turn()) {
+                            continue;
+                        } else if self.is_square_attacked(61, self.opposite_turn()) {
+                            continue;
+                        } else if self.is_square_attacked(60, self.opposite_turn()) {
+                            continue;
+                        }
+                    }
+                    _ => (),
+                }
+            };
+
             let unmake_move = self.make_move(*mv);
 
             // Filter illegal moves

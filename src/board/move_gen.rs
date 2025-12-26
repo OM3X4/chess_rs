@@ -793,9 +793,9 @@ impl Board {
             }
 
             self.switch_turn();
-            self.hash = self.compute_hash();
-            self.occupied = self.get_all_bits();
-            self.piece_at = self.generate_piece_at();
+            // self.hash = self.compute_hash();
+            // self.occupied = self.get_all_bits();
+            // self.piece_at = self.generate_piece_at();
 
             return undo;
         }
@@ -818,10 +818,10 @@ impl Board {
             }
 
             self.switch_turn();
-            self.hash = self.compute_hash();
+            // self.hash = self.compute_hash();
 
-            self.occupied = self.get_all_bits();
-            self.piece_at = self.generate_piece_at();
+            // self.occupied = self.get_all_bits();
+            // self.piece_at = self.generate_piece_at();
 
             return undo;
         }
@@ -858,9 +858,9 @@ impl Board {
         }
 
         self.switch_turn();
-        self.hash = self.compute_hash();
-        self.occupied = self.get_all_bits();
-        self.piece_at = self.generate_piece_at();
+        // self.hash = self.compute_hash();
+        // self.occupied = self.get_all_bits();
+        // self.piece_at = self.generate_piece_at();
 
         undo
     } //
@@ -937,9 +937,9 @@ impl Board {
         self.switch_turn();
         self.castling = unmake_move.castling;
         self.en_passant = unmake_move.en_passant;
-        self.occupied = unmake_move.occupied;
-        self.hash = unmake_move.hash;
-        self.piece_at = self.generate_piece_at();
+        // self.occupied = unmake_move.occupied;
+        // self.hash = unmake_move.hash;
+        // self.piece_at = self.generate_piece_at();
     } //
 } //
 

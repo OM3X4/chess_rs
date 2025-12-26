@@ -578,39 +578,18 @@ impl Board {
         if depth == max_depth {
             return 1;
         }
-
-
-        // println!("{} || {} , {}", self.to_fen() , depth, self.generate_moves().len());
-        // let fen = shakmaty::fen::Fen::from_str(&self.to_fen()).unwrap();
-        // let fen =
-        let mut moves = self.generate_moves();
-
-        // println!("{} || {} , {}", self.to_fen() , depth, moves.len());
-
-        if moves.is_empty() {
-            return 1;
-        }
+        let mut moves = SmallVec::new();
+        self.generate_pesudo_moves(&mut moves);
 
         let mut nodes = 0;
 
-        // if depth == 0 {
-        //     let mv = moves[0];
-        //     let unmake = self.make_move(mv);
-        //     nodes += self.perft(depth + 1, max_depth);
-        //     self.unmake_move(unmake);
-
-        //     return nodes;
-        // }
-
-        // moves.sort_by(|a , b| a.to_uci().cmp(&b.to_uci()));
-
         for mv in moves {
-            // let before = self.clone();
-            // let bitboards = self.bitboards.clone();
-            // let old_fen = self.to_fen();
             let unmake = self.make_move(mv);
 
-            // let position_after_move = self.to_fen();
+            if self.is_king_in_check(self.opposite_turn()) {
+                self.unmake_move(unmake);
+                continue;
+            }
 
             let inner_nodes = self.perft(depth + 1, max_depth);
 
@@ -621,20 +600,6 @@ impl Board {
             }
 
             nodes += inner_nodes;
-
-            // if *self != before {
-            //     dbg!(&old_fen);
-            //     // dbg!(&position_after_move);
-            //     dbg!(self.to_fen());
-            //     panic!();
-            // }
-            // assert_eq!(self.bitboards, before.bitboards);
-            // assert_eq!(self.turn, before.turn);
-            // assert_eq!(self.piece_at, before.piece_at);
-            // assert_eq!(self.castling, before.castling);
-            // assert_eq!(self.en_passant, before.en_passant);
-            // assert_eq!(self.occupied, before.occupied);
-            // assert_eq!(self.hash, before.hash);
         }
 
         nodes

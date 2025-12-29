@@ -20,7 +20,7 @@ fn main() {
 
     // dbg!(board.turn);
     let start = std::time::Instant::now();
-    let best_move = board.engine(64 , 1 , false , true , Duration::from_secs(1));
+    let best_move = board.engine(12 , 1 , false , true , Duration::from_secs(10));
     dbg!(start.elapsed());
     // let best_move_1 = board.engine(6 , 1 , true , false);
     // dbg!(best_move_1.to_uci());

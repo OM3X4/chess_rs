@@ -90,7 +90,7 @@ def stockfish_top_near_moves(
     engine,
     time_sec=3,
     max_moves=5,
-    threshold_cp=30,  # <-- 0.30 pawn window
+    threshold_cp=60,  # <-- 0.60 pawn window
 ):
     infos = engine.analyse(
         board,

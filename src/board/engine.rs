@@ -252,7 +252,11 @@ impl Board {
         let mut score = self.pieces_score();
         score += self.development_score();
 
-        return score;
+
+        if self.turn == Turn::BLACK {
+            return -score;
+        }
+        score
     } //
 
     #[inline(always)]
@@ -423,6 +427,11 @@ impl Board {
         if !found_legal {
             if self.is_king_in_check(self.turn) {
                 let mate = 30_000;
+                println!(
+                    "Found Mate with score {} and for color {:#?}",
+                    -mate + depth,
+                    self.turn
+                );
                 return -mate + depth;
             } else {
                 return 0; // Stalemate
@@ -559,7 +568,6 @@ impl Board {
         let opposite_turn = self.opposite_turn();
         let current_turn = self.turn; // Will be the opposite one making the move
 
-
         for mv in moves {
             if mv.is_castling() {
                 match mv.to() {
@@ -641,7 +649,7 @@ mod test {
         init_bishop_magics();
 
         let mut board = board::Board::new();
-        board.load_from_fen("1r3q1r/4pk1p/Qpp1P1pn/8/1PP2pb1/P6P/3KPPP1/RN3BNR b");
+        board.load_from_fen("r1b2bn1/p1pqpkp1/B7/1p2P2r/1n6/P1P5/1P1P1P2/RNB2RK1 w - - 1 16");
 
         let start = std::time::Instant::now();
         // dbg!(
@@ -653,7 +661,7 @@ mod test {
         // );
         dbg!(
             board
-                .engine(12, 1, false, true, std::time::Duration::from_secs(30))
+                .engine(5, 1, false, false, std::time::Duration::from_secs(300))
                 .to_uci()
         );
         dbg!(start.elapsed());

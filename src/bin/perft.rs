@@ -8,9 +8,9 @@ fn main() {
     init_bishop_magics();
 
     let mut board = Board::new();
-    // board.load_from_fen("r1bqkbnr/pppppppp/n7/P7/8/8/1PPPPPPP/RNBQKBNR b");
+    // board.load_from_fen("rnbqkbnr/1ppppppp/B7/8/p7/4P3/PPPPNPPP/RNBQK2R b KQkq -");
     let start = std::time::Instant::now();
-    dbg!(board.perft(0,6));
+    dbg!(board.perft(0,7));
     dbg!(start.elapsed());
 
     // let args: Vec<String> = std::env::args().collect();

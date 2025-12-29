@@ -263,7 +263,12 @@ impl Board {
         }
         let mut victim;
 
-        victim = self.piece_at[mv.to() as usize].unwrap();
+        victim = self.piece_at[mv.to() as usize].unwrap_or_else(|| {
+            println!("{}", mv.to());
+            println!("{}", mv.from());
+            println!("{}", self.to_fen());
+            panic!()
+        });
         let attacker = mv.piece();
 
         MVV_LVA[(victim.piece_index() % 6) as usize][(attacker.piece_index() % 6) as usize]
@@ -334,6 +339,8 @@ impl Board {
         self.sort_by_mvv_lva(&mut moves);
 
         let iter = moves.iter();
+
+        // let iter = iter.filter(|mv| !mv.is_en_passant());
 
         let mut found_legal = false;
 
@@ -542,7 +549,55 @@ impl Board {
 
         let mut nodes = 0;
 
+        // if depth == 0 { println!("Number of moves : {}" , moves.len()); }
+
+        // if depth == 1 {
+        //     println!("The current castling {:b}", self.castling);
+        // }
+
         for mv in moves {
+            if mv.is_castling() {
+                match mv.to() {
+                    6 => {
+                        if self.is_square_attacked(6, self.opposite_turn()) {
+                            continue;
+                        } else if self.is_square_attacked(5, self.opposite_turn()) {
+                            continue;
+                        } else if self.is_square_attacked(4, self.opposite_turn()) {
+                            continue;
+                        }
+                    }
+                    2 => {
+                        if self.is_square_attacked(2, self.opposite_turn()) {
+                            continue;
+                        } else if self.is_square_attacked(3, self.opposite_turn()) {
+                            continue;
+                        } else if self.is_square_attacked(4, self.opposite_turn()) {
+                            continue;
+                        }
+                    }
+                    58 => {
+                        if self.is_square_attacked(58, self.opposite_turn()) {
+                            continue;
+                        } else if self.is_square_attacked(59, self.opposite_turn()) {
+                            continue;
+                        } else if self.is_square_attacked(60, self.opposite_turn()) {
+                            continue;
+                        }
+                    }
+                    62 => {
+                        if self.is_square_attacked(62, self.opposite_turn()) {
+                            continue;
+                        } else if self.is_square_attacked(61, self.opposite_turn()) {
+                            continue;
+                        } else if self.is_square_attacked(60, self.opposite_turn()) {
+                            continue;
+                        }
+                    }
+                    _ => (),
+                }
+            };
+
             let unmake = self.make_move(mv);
 
             if self.is_king_in_check(self.opposite_turn()) {
@@ -579,7 +634,7 @@ mod test {
         init_bishop_magics();
 
         let mut board = board::Board::new();
-        board.load_from_fen("5r1k/p5p1/1pp2r1p/4N3/P7/RQ1PpP1P/1P5q/5K2 w");
+        board.load_from_fen("1r3q1r/4pk1p/Qpp1P1pn/8/1PP2pb1/P6P/3KPPP1/RN3BNR b");
 
         let start = std::time::Instant::now();
         // dbg!(
@@ -591,7 +646,7 @@ mod test {
         // );
         dbg!(
             board
-                .engine(8, 1, false, false, std::time::Duration::from_secs(10))
+                .engine(12, 1, false, true, std::time::Duration::from_secs(30))
                 .to_uci()
         );
         dbg!(start.elapsed());

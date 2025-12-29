@@ -18,7 +18,7 @@ pub fn random_fen(min_moves: usize, max_moves: usize) -> Fen {
         board = board.play(mv).unwrap();
     }
 
-    Fen::from_position(&board, shakmaty::EnPassantMode::PseudoLegal)
+    Fen::from_position(&board, shakmaty::EnPassantMode::Legal)
 } //
 
 #[cfg(test)]
@@ -40,18 +40,18 @@ mod test {
         let mut counter = 0;
 
         loop {
+            println!("Counter: {}", counter);
             let fen = super::random_fen(0, 10);
-            let fen_string =
-                fen.to_string()
-                    .split_whitespace()
-                    .take(2)
-                    .fold(String::new(), |mut acc, w| {
-                        if !acc.is_empty() {
-                            acc.push(' ');
-                        }
-                        acc.push_str(w);
-                        acc
-                    });
+            let fen_string = fen.to_string();
+            // .split_whitespace()
+            // .take(2)
+            // .fold(String::new(), |mut acc, w| {
+            //     if !acc.is_empty() {
+            //         acc.push(' ');
+            //     }
+            //     acc.push_str(w);
+            //     acc
+            // });
 
             let shakmaty_board: Chess =
                 fen.into_position(shakmaty::CastlingMode::Standard).unwrap();
@@ -79,8 +79,21 @@ mod test {
                     } => {
                         // println!("{} {}" , mv.from().unwrap() as usize, mv.to() as usize);
                         let mv = (mv.from().unwrap() as u8, mv.to() as u8);
+                        if let Some(promotion) = promotion {
+                            if promotion != shakmaty::Role::Queen {
+                                continue;
+                            }
+                        }
                         if my_moves.contains(&mv) {
                             my_moves.remove(&mv);
+                            continue;
+                        } else {
+                            missed.push(mv);
+                        }
+                    },
+                    shakmaty::Move::EnPassant { from, to } => {
+                        let mv = (from as u8, to as u8);
+                        if my_moves.remove(&mv) {
                             continue;
                         } else {
                             missed.push(mv);

@@ -128,12 +128,20 @@ impl Board {
     pub fn remove_piece(&mut self, piece: PieceType, sq: u8) {
         let mask = 1u64 << sq;
 
+        debug_assert!(
+            (self.bitboards.0[piece.piece_index()].0 & mask) != 0,
+            "Attempted to remove {:?} from empty square {} at fen {}",
+            piece,
+            sq,
+            self.to_fen()
+        );
+
         self.bitboards.0[piece.piece_index()].0 &= !mask;
         self.occupied.0 &= !mask;
         self.piece_at[sq as usize] = None;
 
         self.hash ^= Z_PIECE[piece.piece_index()][sq as usize];
-    }
+    }//
 
     pub fn load_from_fen(&mut self, fen: &str) {
         self.reset_to_zero();
@@ -311,6 +319,8 @@ impl Board {
             let rank = en_passant / 8;
             fen.push((b'a' + file as u8) as char);
             fen.push((b'1' + rank as u8) as char);
+        } else {
+            fen.push('-');
         }
 
         fen
@@ -355,4 +365,35 @@ impl Board {
             Turn::BLACK => Turn::WHITE,
         };
     } //
+
+    pub fn print_board(&self) {
+        let mut board_string = String::from("\n  a b c d e f g h\n");
+        for rank in 0..8 {
+            board_string.push_str(&format!("{} ", 8 - rank));
+            for file in 0..8 {
+                let square = rank * 8 + file;
+                let piece = self.piece_at(square);
+                let char = match piece {
+                    Some(piece) => match piece {
+                        PieceType::WhiteKing => 'K',
+                        PieceType::WhiteQueen=> 'Q',
+                        PieceType::WhiteRook=> 'R',
+                        PieceType::WhiteBishop => 'B',
+                        PieceType::WhiteKnight => 'N',
+                        PieceType::WhitePawn => 'P',
+                        PieceType::BlackKing => 'k',
+                        PieceType::BlackQueen => 'q',
+                        PieceType::BlackRook => 'r',
+                        PieceType::BlackBishop => 'b',
+                        PieceType::BlackKnight => 'n',
+                        PieceType::BlackPawn => 'p',
+                    },
+                    None => '.',
+                };
+                board_string.push(char);
+            }
+            board_string.push_str("\n");
+        }
+        println!("{}", board_string);
+    }
 } //

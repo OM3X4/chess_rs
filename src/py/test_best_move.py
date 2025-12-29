@@ -175,7 +175,7 @@ with chess.engine.SimpleEngine.popen_uci(STOCKFISH_PATH) as sf:
             text=True
         )
 
-        out, _ = p.communicate(minimal_fen[0] + " " + minimal_fen[1])
+        out, _ = p.communicate(fen)
         engine_move = tuple(map(int, out.strip().split()))
 
         print("FEN:", fen)

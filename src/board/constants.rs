@@ -331,8 +331,10 @@ pub const SQUARE_RAYS: [u64; 64] = {
     table
 };
 
+pub const RANK_3: u64 = 0x0000000000FF0000;
 pub const RANK_4: u64 = 0x00000000FF000000;
 pub const RANK_5: u64 = 0x000000FF00000000;
+pub const RANK_6: u64 = 0x0000FF0000000000;
 pub const RANK_2: u64 = 0x000000000000FF00;
 pub const RANK_7: u64 = 0x00FF000000000000;
 pub const RANK_8: u64 = 0xFF00000000000000;

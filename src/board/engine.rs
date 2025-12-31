@@ -250,7 +250,7 @@ impl Board {
 
     pub fn evaluate(&mut self) -> i32 {
         let mut score = self.pieces_score();
-        score += self.development_score();
+        // score += self.development_score();
 
         if self.turn == Turn::BLACK {
             return -score;
@@ -289,6 +289,48 @@ impl Board {
         // Quiet moves stay untouched
     } //
 
+    pub fn quiescence(&mut self, alpha: i32, beta: i32) -> i32 {
+        let stand_pat = self.evaluate();
+
+        let margin = 900; // queen value
+
+        if stand_pat + margin < alpha {
+            return alpha;
+        }
+
+
+        if stand_pat >= beta {
+            return beta;
+        }
+        let mut alpha = alpha.max(stand_pat);
+
+        let mut moves = SmallVec::new();
+        self.generate_pesudo_moves(&mut moves);
+
+        let mut iter = moves.iter().filter(|mv| mv.is_capture());
+
+        for mv in iter {
+            let undo = self.make_move(*mv);
+
+            // after make_move, side-to-move is the opponent
+            // ensure the player who just moved is not in check
+            if self.is_king_in_check(self.opposite_turn()) {
+                self.unmake_move(undo);
+                continue;
+            }
+
+            let score = -self.quiescence(-beta, -alpha);
+            self.unmake_move(undo);
+
+            if score >= beta {
+                return beta;
+            }
+            alpha = alpha.max(score);
+        }
+
+        alpha
+    } //
+
     pub fn alpha_beta(
         &mut self,
         depth: i32,
@@ -299,15 +341,12 @@ impl Board {
         is_tt: bool,
         is_null_move_pruning: bool,
         is_lmr: bool,
+        is_quiesense: bool,
     ) -> i32 {
         NODE_COUNT.fetch_add(1, Ordering::Relaxed);
 
         let depth_remaining = max_depth - depth;
         let orig_alpha = alpha;
-
-        // if NODE_COUNT.load(Ordering::Relaxed) % 10_000_000 == 0 {
-        //     dbg!("Nodes: {}", NODE_COUNT.load(Ordering::Relaxed));
-        // }
 
         // 1. TT LOOKUP
         if is_tt {
@@ -319,8 +358,10 @@ impl Board {
 
         // 2. BASE CASE (Optimized)
         if depth >= max_depth {
-            let score = self.evaluate();
-            return score;
+            if is_quiesense {
+                return self.quiescence(alpha, beta);
+            }
+            return self.evaluate();
         }
 
         // 3. NULL MOVE PRUNING
@@ -336,6 +377,7 @@ impl Board {
                 false,
                 false,
                 false,
+                false,
             );
             self.switch_turn();
             if score >= beta {
@@ -343,15 +385,13 @@ impl Board {
             }
         };
 
-        // 3. MOVE GENERATION (Only for internal nodes)
+        // 4. MOVE GENERATION (Only for internal nodes)
         let mut moves = SmallVec::new();
         self.generate_pesudo_moves(&mut moves);
 
         self.sort_by_mvv_lva(&mut moves);
 
         let iter = moves.iter();
-
-        // let iter = iter.filter(|mv| !mv.is_en_passant());
 
         let mut found_legal = false;
 
@@ -429,6 +469,7 @@ impl Board {
                     is_tt,
                     is_null_move_pruning,
                     is_lmr,
+                    is_quiesense,
                 );
             } else {
                 // Reduction
@@ -446,6 +487,7 @@ impl Board {
                     is_tt,
                     is_null_move_pruning,
                     is_lmr,
+                    false,
                 );
 
                 if reduced_score >= beta {
@@ -458,6 +500,7 @@ impl Board {
                         is_tt,
                         is_null_move_pruning,
                         is_lmr,
+                        is_quiesense,
                     );
                 } else {
                     score = reduced_score;
@@ -502,6 +545,7 @@ impl Board {
         is_tt: bool,
         is_null_move_pruning: bool,
         is_lmr: bool,
+        is_quiesense: bool,
         maximum_time: Duration,
     ) -> Move {
         let mut moves = self.generate_moves();
@@ -537,6 +581,7 @@ impl Board {
                     is_tt,
                     is_null_move_pruning,
                     is_lmr,
+                    is_quiesense,
                 );
 
                 if score > best_score {
@@ -569,6 +614,7 @@ impl Board {
         is_tt: bool,
         is_null_move_pruning: bool,
         is_lmr: bool,
+        is_quiesense: bool,
         maximum_time: std::time::Duration,
     ) -> Move {
         if let Some(uci) = self.get_random_opening_move() {
@@ -595,7 +641,14 @@ impl Board {
             return Move::new(from, to, piece, capture, false, false, false);
         };
 
-        self.engine_singlethread(max_depth, is_tt, is_null_move_pruning, is_lmr, maximum_time)
+        self.engine_singlethread(
+            max_depth,
+            is_tt,
+            is_null_move_pruning,
+            is_lmr,
+            is_quiesense,
+            maximum_time,
+        )
     } //
 
     pub fn perft(&mut self, depth: i32, max_depth: i32) -> i64 {
@@ -712,6 +765,7 @@ mod test {
                 .engine(
                     6,
                     1,
+                    false,
                     false,
                     false,
                     false,
@@ -2351,9 +2405,7 @@ mod test {
             ),
         ];
 
-
         let start_time = std::time::Instant::now();
-
 
         for (i, (fen, moves)) in fens.iter().enumerate() {
             if i >= 50 {
@@ -2366,8 +2418,15 @@ mod test {
             let mut board = board::Board::new();
             board.load_from_fen(fen);
 
-            let best_move =
-                board.engine(20, 1, false, true, true, std::time::Duration::from_secs(20));
+            let best_move = board.engine(
+                10,
+                1,
+                false,
+                true,
+                false,
+                true,
+                std::time::Duration::from_secs(20),
+            );
             dbg!((best_move.from(), best_move.to()));
 
             if moves.contains(&[best_move.from() as u8, best_move.to() as u8]) {

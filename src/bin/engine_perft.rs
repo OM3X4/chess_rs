@@ -3,8 +3,9 @@ use std::time::Duration;
 fn main() {
     use chess::board::*;
     let depth = 12;
-    let is_tt = true;
-    let is_null_move_pruning = true;
+    let is_tt = false;
+    let is_lmr = false;
+    let is_null_move_pruning = false;
     use bishop_magic::init_bishop_magics;
     use rook_magic::init_rook_magics;
 
@@ -59,7 +60,7 @@ fn main() {
         println!("-------------------------------------------------");
         println!("Single Threaded Engine:");
         let start = std::time::Instant::now();
-        let best_move = board.engine(depth , 1 , is_tt , is_null_move_pruning , Duration::from_secs(15));
+        let best_move = board.engine(depth , 1 , is_tt , is_null_move_pruning , is_lmr , Duration::from_secs(15));
         println!("Time taken: {:?}", start.elapsed());
         println!("Best Move: {}", best_move.to_uci());
         println!("-------------------------------------------------\n");

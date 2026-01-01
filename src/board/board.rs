@@ -12,6 +12,7 @@ pub struct Board {
     pub hash: u64,
     pub en_passant: Option<u8>,
     pub castling: u8,
+    pub eval: i32 // Always white favor
 }
 
 impl Board {
@@ -24,10 +25,12 @@ impl Board {
             occupied: BitBoard(RANK_1 | RANK_2 | RANK_7 | RANK_8),
             en_passant: None,
             castling: 15,
+            eval: 0
         };
 
         board.piece_at = board.generate_piece_at();
         board.hash = board.compute_hash();
+        board.eval = board.evaluate();
 
         board
     } //
@@ -40,6 +43,7 @@ impl Board {
         self.turn = Turn::WHITE;
         self.en_passant = None;
         self.castling = 15;
+        self.eval = 0;
     } //
     pub fn reset_to_zero(&mut self) {
         self.bitboards = BitBoards::zero();
@@ -49,6 +53,7 @@ impl Board {
         self.turn = Turn::WHITE;
         self.en_passant = None;
         self.castling = 0;
+        self.eval = 0;
     } //
     pub fn get_all_white_bits(&self) -> BitBoard {
         return BitBoard(
@@ -121,6 +126,7 @@ impl Board {
         self.bitboards.0[piece.piece_index()].0 |= mask;
         self.occupied.0 |= mask;
         self.piece_at[sq as usize] = Some(piece);
+        self.eval += piece.value();
 
         self.hash ^= Z_PIECE[piece.piece_index()][sq as usize];
     } //
@@ -139,9 +145,10 @@ impl Board {
         self.bitboards.0[piece.piece_index()].0 &= !mask;
         self.occupied.0 &= !mask;
         self.piece_at[sq as usize] = None;
+        self.eval -= piece.value();
 
         self.hash ^= Z_PIECE[piece.piece_index()][sq as usize];
-    }//
+    } //
 
     pub fn load_from_fen(&mut self, fen: &str) {
         self.reset_to_zero();
@@ -231,6 +238,7 @@ impl Board {
         self.occupied = self.get_all_bits();
         self.piece_at = self.generate_piece_at();
         self.hash = self.compute_hash();
+        self.eval = self.evaluate();
     } //
 
     pub fn to_fen(&self) -> String {
@@ -395,5 +403,5 @@ impl Board {
             board_string.push_str("\n");
         }
         println!("{}", board_string);
-    }
+    } //
 } //

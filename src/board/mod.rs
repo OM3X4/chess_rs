@@ -30,18 +30,18 @@ pub enum Bound {
     Upper = 2,
 }
 
-const PIECE_VALUE: [i8; 12] = [
-    1, // WhitePawn
-    3, // WhiteKnight
-    3, // WhiteBishop
-    5, // WhiteRook
-    9, // WhiteQueen
+const PIECE_VALUE: [i32; 12] = [
+    100, // WhitePawn
+    300, // WhiteKnight
+    300, // WhiteBishop
+    500, // WhiteRook
+    900, // WhiteQueen
     0, // WhiteKing
-    1, // BlackPawn
-    3, // BlackKnight
-    3, // BlackBishop
-    5, // BlackRook
-    9, // BlackQueen
+    -100, // BlackPawn
+    -300, // BlackKnight
+    -300, // BlackBishop
+    -500, // BlackRook
+    -900, // BlackQueen
     0, // BlackKing
 ];
 
@@ -66,7 +66,7 @@ impl PieceType {
     pub fn piece_index(self) -> usize {
         self as usize
     }
-    pub fn value(self) -> i8 {
+    pub fn value(self) -> i32 {
         unsafe { *PIECE_VALUE.get_unchecked(self as usize) }
     }
 }
@@ -172,6 +172,7 @@ pub struct UnMakeMove {
     hash: u64,
     castling: u8,
     en_passant: Option<u8>,
+    eval: i32,
 }
 
 impl UnMakeMove {
@@ -186,6 +187,7 @@ impl UnMakeMove {
         hash: u64,
         castling: u8,
         en_passant: Option<u8>,
+        eval: i32,
     ) -> UnMakeMove {
         UnMakeMove {
             from,
@@ -198,6 +200,7 @@ impl UnMakeMove {
             is_en_passant,
             castling,
             en_passant,
+            eval
         }
     }
 }

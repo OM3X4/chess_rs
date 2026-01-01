@@ -290,7 +290,7 @@ impl Board {
     } //
 
     pub fn quiescence(&mut self, alpha: i32, beta: i32) -> i32 {
-        let stand_pat = self.evaluate();
+        let stand_pat = self.eval;
 
         let margin = 900; // queen value
 
@@ -354,15 +354,19 @@ impl Board {
                 // SKIP_COUNT.fetch_add(1, Ordering::Relaxed);
                 return score;
             }
-        }
+        };
 
         // 2. BASE CASE (Optimized)
         if depth >= max_depth {
             if is_quiesense {
                 return self.quiescence(alpha, beta);
             }
-            return self.evaluate();
-        }
+            // return self.evaluate();
+            match self.turn {
+                Turn::BLACK => return -self.eval,
+                Turn::WHITE => return self.eval,
+            }
+        };
 
         // 3. NULL MOVE PRUNING
         if depth_remaining >= 3 && !self.is_king_in_check(self.turn) && is_null_move_pruning {
@@ -451,7 +455,7 @@ impl Board {
             if self.is_king_in_check(self.opposite_turn()) {
                 self.unmake_move(unmake_move);
                 continue;
-            }
+            };
 
             found_legal = true;
 
@@ -652,6 +656,9 @@ impl Board {
     } //
 
     pub fn perft(&mut self, depth: i32, max_depth: i32) -> i64 {
+        // if self.eval != self.evaluate() && self.eval != -self.evaluate() {
+        //     println!("Mismatched evaluation")
+        // }
         if depth == max_depth {
             return 1;
         }
@@ -2418,16 +2425,19 @@ mod test {
             let mut board = board::Board::new();
             board.load_from_fen(fen);
 
+            let inner_start_time = std::time::Instant::now();
+
             let best_move = board.engine(
-                10,
+                4,
                 1,
                 false,
-                true,
                 false,
-                true,
+                false,
+                false,
                 std::time::Duration::from_secs(20),
             );
             dbg!((best_move.from(), best_move.to()));
+            dbg!(inner_start_time.elapsed());
 
             if moves.contains(&[best_move.from() as u8, best_move.to() as u8]) {
                 println!("✅ ok");

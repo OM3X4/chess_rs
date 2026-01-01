@@ -721,6 +721,7 @@ impl Board {
             is_castling: mv.is_castling(),
             castling: self.castling,
             en_passant: self.en_passant,
+            eval: self.eval
         };
 
         /* -----------------------------
@@ -936,6 +937,7 @@ impl Board {
         self.switch_turn();
         self.castling = unmake_move.castling;
         self.en_passant = unmake_move.en_passant;
+        self.eval = unmake_move.eval;
         // self.occupied = unmake_move.occupied;
         // self.hash = unmake_move.hash;
         // self.occupied = self.get_all_bits();

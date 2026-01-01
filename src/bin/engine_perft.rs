@@ -61,7 +61,7 @@ fn main() {
         println!("-------------------------------------------------");
         println!("Single Threaded Engine:");
         let start = std::time::Instant::now();
-        let best_move = board.engine(depth , 1 , is_tt , is_null_move_pruning , is_lmr , is_quiesense , Duration::from_secs(15));
+        let best_move = board.engine(10 , 1 , is_tt , is_null_move_pruning , is_lmr , is_quiesense , Duration::from_secs(3000));
         println!("Time taken: {:?}", start.elapsed());
         println!("Best Move: {}", best_move.to_uci());
         println!("-------------------------------------------------\n");

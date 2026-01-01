@@ -199,15 +199,15 @@ mod test {
 
         // Starting Position eval must be zero
         board.load_from_fen("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w");
-        assert_eq!(board.evaluate(), 0);
+        assert_eq!(board.eval, 0);
 
         // White up a pawn (white to move)
         board.load_from_fen("rnbqkbnr/pppp1ppp/8/8/8/8/PPPPPPPP/RNBQKBNR w");
-        assert_eq!(board.evaluate(), 100);
+        assert_eq!(board.eval, 100);
 
         // White up a pawn (black to move)
         board.load_from_fen("rnbqkbnr/pppp1ppp/8/8/8/8/PPPPPPPP/RNBQKBNR b");
-        assert_eq!(board.evaluate(), -100);
+        assert_eq!(board.eval, -100);
     } //
 
     #[test]

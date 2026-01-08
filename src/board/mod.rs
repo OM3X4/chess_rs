@@ -168,7 +168,9 @@ impl Move {
         let to: u8 = rank_to * 8 + file_to;
 
         if let Some(en_passant) = board.en_passant {
-            if en_passant == to && board.piece_at[from as usize] == Some(PieceType::Pawn) {
+            let required_piece = board.
+
+            if en_passant == to {
                 let piece = board.piece_at[from as usize].unwrap();
 
                 return Move::new(from, to, piece, true, false, false, true);

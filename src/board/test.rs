@@ -160,7 +160,7 @@ mod test {
 
             let start = std::time::Instant::now();
             let best_move_by_engine = board
-                .engine(16, true, false, true,false , false,  std::time::Duration::from_secs(5))
+                .engine(16, true, false, true,false , false,  false, std::time::Duration::from_secs(5))
                 .to_uci();
             dbg!(start.elapsed());
 

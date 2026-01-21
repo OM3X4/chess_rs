@@ -3,7 +3,7 @@ use super::zobrist::Z_PIECE;
 use super::{BitBoard, BitBoards, GameState, Turn};
 use crate::board::PieceType;
 
-#[derive(Debug, Copy, Clone, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct Board {
     pub bitboards: BitBoards,
     pub turn: Turn,
@@ -12,7 +12,9 @@ pub struct Board {
     pub hash: u64,
     pub en_passant: Option<u8>,
     pub castling: u8,
-    pub eval: i32 // Always white favor
+    pub eval: i32, // Always white favor
+    pub history: Vec<u64>,
+    pub last_irreversible_move: u64,
 }
 
 impl Board {
@@ -25,12 +27,15 @@ impl Board {
             occupied: BitBoard(RANK_1 | RANK_2 | RANK_7 | RANK_8),
             en_passant: None,
             castling: 15,
-            eval: 0
+            eval: 0,
+            history: Vec::new(),
+            last_irreversible_move: 0,
         };
 
         board.piece_at = board.generate_piece_at();
         board.hash = board.compute_hash();
         board.eval = board.evaluate();
+        board.history = vec![board.hash];
 
         board
     } //
@@ -44,6 +49,7 @@ impl Board {
         self.en_passant = None;
         self.castling = 15;
         self.eval = 0;
+        self.history = vec![self.hash];
     } //
     pub fn reset_to_zero(&mut self) {
         self.bitboards = BitBoards::zero();
@@ -54,6 +60,7 @@ impl Board {
         self.en_passant = None;
         self.castling = 0;
         self.eval = 0;
+        self.history = vec![self.hash];
     } //
     pub fn get_all_white_bits(&self) -> BitBoard {
         return BitBoard(
@@ -128,7 +135,6 @@ impl Board {
         self.piece_at[sq as usize] = Some(piece);
         self.eval += piece.value();
         self.eval += piece.pst(sq);
-
 
         self.hash ^= Z_PIECE[piece.piece_index()][sq as usize];
     } //
@@ -242,6 +248,7 @@ impl Board {
         self.piece_at = self.generate_piece_at();
         self.hash = self.compute_hash();
         self.eval = self.evaluate();
+        self.history = vec![self.hash];
     } //
 
     pub fn to_fen(&self) -> String {
@@ -377,6 +384,27 @@ impl Board {
         };
     } //
 
+    pub fn is_3fold_repetition(&self) -> bool {
+
+        let hash = self.hash;
+
+        let mut count = 0;
+        let mut len = self.history.len();
+
+        if len < 0 {
+            return false;
+        }
+        for i in (self.last_irreversible_move as usize..len).rev() {
+            if self.history[i] == hash {
+                count += 1;
+                if count == 3 {
+                    return true;
+                }
+            }
+        }
+        return false;
+    } //
+
     pub fn print_board(&self) {
         let mut board_string = String::from("\n  a b c d e f g h\n");
         for rank in 0..8 {
@@ -387,8 +415,8 @@ impl Board {
                 let char = match piece {
                     Some(piece) => match piece {
                         PieceType::WhiteKing => 'K',
-                        PieceType::WhiteQueen=> 'Q',
-                        PieceType::WhiteRook=> 'R',
+                        PieceType::WhiteQueen => 'Q',
+                        PieceType::WhiteRook => 'R',
                         PieceType::WhiteBishop => 'B',
                         PieceType::WhiteKnight => 'N',
                         PieceType::WhitePawn => 'P',

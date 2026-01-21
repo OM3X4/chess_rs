@@ -356,6 +356,10 @@ impl Board {
     ) -> i32 {
         NODE_COUNT.fetch_add(1, Ordering::Relaxed);
 
+        if self.is_3fold_repetition() {
+            return 0;
+        }
+
         let orig_alpha = alpha;
         let orig_beta = beta;
         let mut best_move_from_tt: Option<Move> = None;
@@ -808,7 +812,7 @@ impl Board {
 mod test {
     use std::collections::HashMap;
 
-    use crate::board::board;
+    use crate::board::{Move, board};
 
     #[test]
     fn test() {
@@ -819,7 +823,19 @@ mod test {
         init_bishop_magics();
 
         let mut board = board::Board::new();
-        board.load_from_fen("r1bqkb1r/pppp1ppp/2n2n2/1B2p3/4P3/5N2/PPPP1PPP/RNBQK2R w KQkq - 0 4 ");
+        dbg!(&board.history);
+        // board.load_from_fen("r1bqkb1r/pppp1ppp/2n2n2/1B2p3/4P3/5N2/PPPP1PPP/RNBQK2R w KQkq - 0 4 ");
+        board.make_move(Move::from_uci("g1f3", &board));
+        board.make_move(Move::from_uci("g8f6", &board));
+        board.make_move(Move::from_uci("f3g1", &board));
+        board.make_move(Move::from_uci("f6g8", &board));
+        board.make_move(Move::from_uci("g1f3", &board));
+        board.make_move(Move::from_uci("g8f6", &board));
+        board.make_move(Move::from_uci("f3g1", &board));
+        board.make_move(Move::from_uci("f6g8", &board));
+        dbg!(&board.history);
+        // board.make_move(Move::from_uci("f6g8", &board));
+
 
         let start = std::time::Instant::now();
         // dbg!(
@@ -829,12 +845,12 @@ mod test {
         //         .map(|mv| mv.to_uci())
         //         .collect::<Vec<String>>()
         // );
-        let moves = board
-            .generate_moves()
-            .iter()
-            .map(|mv| mv.to_uci())
-            .collect::<Vec<String>>();
-        dbg!(moves);
+        // let moves = board
+        //     .generate_moves()
+        //     .iter()
+        //     .map(|mv| mv.to_uci())
+        //     .collect::<Vec<String>>();
+        // dbg!(moves);
         // dbg!(
         //     board
         //         .engine(64, true, false, true, true, false, std::time::Duration::from_millis(5000))

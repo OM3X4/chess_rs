@@ -229,6 +229,7 @@ pub struct UnMakeMove {
     castling: u8,
     en_passant: Option<u8>,
     eval: i32,
+    last_irreversible_move: u64,
 }
 
 impl UnMakeMove {
@@ -244,6 +245,7 @@ impl UnMakeMove {
         castling: u8,
         en_passant: Option<u8>,
         eval: i32,
+        last_irreversible_move: u64,
     ) -> UnMakeMove {
         UnMakeMove {
             from,
@@ -257,6 +259,7 @@ impl UnMakeMove {
             castling,
             en_passant,
             eval,
+            last_irreversible_move,
         }
     }
 }

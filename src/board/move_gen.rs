@@ -725,6 +725,7 @@ impl Board {
             castling: self.castling,
             en_passant: self.en_passant,
             eval: self.eval,
+            last_irreversible_move: self.last_irreversible_move,
         };
 
         /* -----------------------------
@@ -888,6 +889,12 @@ impl Board {
         }
         // self.piece_at = self.generate_piece_at();
 
+        self.history.push(self.hash);
+        if mv.is_capture() || old_castling_rights != self.castling || mv.is_en_passant() || mv.piece() == PieceType::WhitePawn || mv.piece() == PieceType::BlackPawn {
+            self.last_irreversible_move = (self.history.len() as u64) - 1;
+        }
+
+
         return undo;
     } //
 
@@ -966,6 +973,8 @@ impl Board {
         self.eval = unmake_move.eval;
         self.hash = unmake_move.hash;
         self.occupied = unmake_move.occupied;
+        self.history.pop();
+        self.last_irreversible_move = unmake_move.last_irreversible_move;
         // self.occupied = unmake_move.occupied;
         // self.hash = unmake_move.hash;
         // self.occupied = self.get_all_bits();

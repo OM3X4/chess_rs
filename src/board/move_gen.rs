@@ -692,6 +692,67 @@ impl Board {
         return false;
     } //
 
+    pub fn get_least_valuable_attacker_to_sq_by_color(&self, square: u8, turn: Turn) -> i32 {
+        let sq_bb = 1u64 << square as u64;
+
+        // Color index modifier for the bitboards
+        let color_index_modifier = match self.turn {
+            Turn::WHITE => 0,
+            Turn::BLACK => 6,
+        };
+
+        // Checking for attacking pawns
+        let enemy_pawns = self.bitboards.0[((PieceType::WhitePawn as u8) + color_index_modifier) as usize].0;
+
+        let pawns_attacks = match turn {
+            Turn::WHITE => WHITE_PAWN_ATTACKS[square as usize],
+            Turn::BLACK => BLACK_PAWN_ATTACKS[square as usize],
+        };
+        let attacking_pawns = pawns_attacks & enemy_pawns;
+
+        if attacking_pawns != 0 {
+            return 100 + attacking_pawns.trailing_zeros() as i32;
+        }
+
+        // Checking for attacking knights
+        let enemy_knights = self.bitboards.0[((PieceType::WhiteKnight as u8) + color_index_modifier) as usize].0;
+        let knights_attacks = KNIGHTS_ATTACK_TABLE[square as usize];
+        let attacking_knights = knights_attacks & enemy_knights;
+
+        if attacking_knights != 0 {
+            return 300 + attacking_knights.trailing_zeros() as i32;
+        }
+
+        // Checking for attacking bishops
+        let enemy_bishops = self.bitboards.0[((PieceType::WhiteBishop as u8) + color_index_modifier) as usize].0;
+        let bishops_attacks_bb = bishop_attacks(square as usize, self.occupied.0);
+        let attacking_bishops = bishops_attacks_bb & enemy_bishops;
+
+        if attacking_bishops != 0 {
+            return 300 + attacking_bishops.trailing_zeros() as i32;
+        }
+
+        // Checking for attacking rooks
+        let enemy_rooks = self.bitboards.0[((PieceType::WhiteRook as u8) + color_index_modifier) as usize].0;
+        let rooks_attacks_bb = rook_attacks(square as usize, self.occupied.0);
+        let attacking_rooks = rooks_attacks_bb & enemy_rooks;
+
+        if attacking_rooks != 0 {
+            return 500 + attacking_rooks.trailing_zeros() as i32;
+        }
+
+        // Checking for attacking queens
+        let enemy_queens = self.bitboards.0[((PieceType::WhiteQueen as u8) + color_index_modifier) as usize].0;
+        let queens_attacks = rook_attacks(square as usize, self.occupied.0) | bishop_attacks(square as usize, self.occupied.0);
+        let attacking_queens = queens_attacks & enemy_queens;
+
+        if attacking_queens != 0 {
+            return 900 + attacking_queens.trailing_zeros() as i32;
+        }
+
+        return 0;
+    } //
+
     pub fn make_move(&mut self, mv: Move) -> UnMakeMove {
         // if mv.is_en_passant() {
         //     println!("En passant spotted the move {} , the fen before : {}", mv.to_uci(), self.to_fen());

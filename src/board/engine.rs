@@ -304,7 +304,7 @@ impl Board {
             Turn::BLACK => -self.eval,
         };
 
-        let margin = 200; // queen value
+        let margin = 900; // queen value
 
         if stand_pat + margin < alpha {
             return alpha;

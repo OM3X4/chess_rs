@@ -738,9 +738,6 @@ impl Board {
     } //
 
     pub fn perft(&mut self, depth: i32, max_depth: i32) -> i64 {
-        // if self.eval != self.evaluate() && self.eval != -self.evaluate() {
-        //     println!("Mismatched evaluation")
-        // }
         if depth == max_depth {
             return 1;
         }
@@ -748,12 +745,6 @@ impl Board {
         self.generate_pesudo_moves(&mut moves);
 
         let mut nodes = 0;
-
-        // if depth == 0 { println!("Number of moves : {}" , moves.len()); }
-
-        // if depth == 1 {
-        //     println!("The current castling {:b}", self.castling);
-        // }
 
         let opposite_turn = self.opposite_turn();
         let current_turn = self.turn; // Will be the opposite one making the move
@@ -839,18 +830,11 @@ mod test {
         init_bishop_magics();
 
         let mut board = board::Board::new();
-        dbg!(&board.history);
-        // board.load_from_fen("r1bqkb1r/pppp1ppp/2n2n2/1B2p3/4P3/5N2/PPPP1PPP/RNBQK2R w KQkq - 0 4 ");
-        board.make_move(Move::from_uci("g1f3", &board));
-        board.make_move(Move::from_uci("g8f6", &board));
-        board.make_move(Move::from_uci("f3g1", &board));
-        board.make_move(Move::from_uci("f6g8", &board));
-        board.make_move(Move::from_uci("g1f3", &board));
-        board.make_move(Move::from_uci("g8f6", &board));
-        board.make_move(Move::from_uci("f3g1", &board));
-        board.make_move(Move::from_uci("f6g8", &board));
-        dbg!(&board.history);
-        // board.make_move(Move::from_uci("f6g8", &board));
+        board.make_move(Move::from_uci("e2e4", &board));
+        println!("{}", board.to_fen());
+        println!("{:x}", board.hash);
+        println!("{:x}", board.compute_hash());
+
 
         let start = std::time::Instant::now();
         // dbg!(

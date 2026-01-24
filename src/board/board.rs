@@ -145,14 +145,6 @@ impl Board {
     pub fn remove_piece(&mut self, piece: PieceType, sq: u8) {
         let mask = 1u64 << sq;
 
-        debug_assert!(
-            (self.bitboards.0[piece.piece_index()].0 & mask) != 0,
-            "Attempted to remove {:?} from empty square {} at fen {}",
-            piece,
-            sq,
-            self.to_fen()
-        );
-
         self.bitboards.0[piece.piece_index()].0 &= !mask;
         self.occupied.0 &= !mask;
         self.piece_at[sq as usize] = None;

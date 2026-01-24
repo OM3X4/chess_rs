@@ -71,8 +71,8 @@ fn main() {
                     idx += 1;
                 }
             }
-            dbg!(board.hash);
-            dbg!(board.to_fen());
+            // dbg!(board.hash);
+            // dbg!(board.to_fen());
             io::stdout().flush().unwrap();
         } else if input.starts_with("setoption") {
             if input.contains("UseTT") {

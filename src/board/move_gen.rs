@@ -754,12 +754,6 @@ impl Board {
     } //
 
     pub fn make_move(&mut self, mv: Move) -> UnMakeMove {
-        // if mv.is_en_passant() {
-        //     println!("En passant spotted the move {} , the fen before : {}", mv.to_uci(), self.to_fen());
-        //     println!("from {} to {}", mv.from(), mv.to());
-        //     println!("the piece to delete {}" , match self.turn { Turn::WHITE => mv.to() - 8, Turn::BLACK => mv.to() + 8 });
-        // }
-
         let from = mv.from() as u8;
         let to = mv.to() as u8;
         let piece = mv.piece();
@@ -924,14 +918,8 @@ impl Board {
             self.en_passant = Some(from - 8);
         }
 
-        // if mv.is_en_passant() {
-        //     println!("Fen after : {}", self.to_fen());
-        // }
-
+        // It Also Updates the hash
         self.switch_turn();
-
-        // Updating the hash for turn
-        self.hash ^= *Z_SIDE;
 
         // Updating the hash for castling rights
         let diff = old_castling_rights ^ self.castling;
@@ -948,13 +936,11 @@ impl Board {
         if diff & 0b1000 != 0 {
             self.hash ^= Z_CASTLING[3];
         }
-        // self.piece_at = self.generate_piece_at();
 
         self.history.push(self.hash);
         if mv.is_capture() || old_castling_rights != self.castling || mv.is_en_passant() || mv.piece() == PieceType::WhitePawn || mv.piece() == PieceType::BlackPawn {
             self.last_irreversible_move = (self.history.len() as u64) - 1;
         }
-
 
         return undo;
     } //

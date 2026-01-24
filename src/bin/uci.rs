@@ -1,4 +1,4 @@
-use chess::board::bishop_magic::init_bishop_magics;
+use chess::board::{TranspositionTable, bishop_magic::init_bishop_magics};
 use chess::board::rook_magic::init_rook_magics;
 use chess::board::Move;
 use std::io::{self, Write};
@@ -8,6 +8,8 @@ fn main() {
     init_rook_magics();
 
     let mut board = chess::board::Board::new();
+
+    let mut tt = TranspositionTable::new(20);
 
     let mut depth = 64;
     let mut time = std::time::Duration::from_secs(30000);
@@ -116,7 +118,8 @@ fn main() {
                         use_lmr,
                         use_q,
                         use_move_ordering,
-                        time
+                        time,
+                        Some(&mut tt)
                     )
                     .to_uci()
             );

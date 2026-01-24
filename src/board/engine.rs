@@ -381,16 +381,17 @@ impl Board {
                             };
                             return score;
                         }
-                        Bound::Lower => {
-                            alpha = alpha.max(entry.score);
-                        }
-                        Bound::Upper => {
-                            beta = beta.min(entry.score);
-                        }
+                        _ => (),
+                        // Bound::Lower => {
+                        //     alpha = alpha.max(entry.score);
+                        // }
+                        // Bound::Upper => {
+                        //     beta = beta.min(entry.score);
+                        // }
                     }
-                    if alpha >= beta {
-                        return alpha;
-                    }
+                    // if alpha >= beta {
+                    //     return alpha;
+                    // }
                 }
             }
         };
@@ -624,6 +625,7 @@ impl Board {
         is_quiesense: bool,
         is_move_ordering: bool,
         maximum_time: Duration,
+        tt_global: Option<&mut TranspositionTable>
     ) -> Move {
         let mut moves = self.generate_moves();
         partition_by_bool(&mut moves, |mv| mv.is_capture());
@@ -633,7 +635,13 @@ impl Board {
         let mut searched_depth = 0;
         let mut best_stable_move = moves[0];
         let mut best_move = moves[0];
-        let mut tt = TranspositionTable::new(20);
+
+        let mut tt = match tt_global {
+            Some(tt) => tt,
+            None => &mut TranspositionTable::new(20),
+        };
+
+        // let mut tt = TranspositionTable::new(20);
         let mut killer_moves: [[Option<Move>; 2]; 128] = [[None; 2]; 128];
 
         let mut root_moves = vec![];
@@ -710,6 +718,7 @@ impl Board {
         is_quiesense: bool,
         is_move_ordering: bool,
         maximum_time: Duration,
+        tt : Option<&mut TranspositionTable>,
     ) -> Move {
         // if let Some(uci) = self.get_random_opening_move() {
         //     let bytes = uci.as_bytes();
@@ -744,6 +753,7 @@ impl Board {
             is_quiesense,
             is_move_ordering,
             maximum_time,
+            tt
         )
     } //
 

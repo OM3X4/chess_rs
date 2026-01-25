@@ -1,4 +1,4 @@
-pub struct BookEntry { pub hash: u64, pub moves: &'static [u16], }
+pub struct BookEntry { pub hash: u64, pub moves: &'static [u32], }
 pub static OPENING_BOOK: &[BookEntry] = &[
     BookEntry { hash: 0x000b23ee971011fc, moves: &[5249, 1227, 2332] },
     BookEntry { hash: 0x000c61017bef0f59, moves: &[5446, 5574, 1032, 1804, 1869, 1422, 1999, 1747] },

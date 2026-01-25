@@ -121,7 +121,7 @@ fn main() {
                         use_q,
                         use_move_ordering,
                         time,
-                        Some(&mut tt)
+                        None
                     )
                     .to_uci()
             );

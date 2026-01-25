@@ -524,7 +524,8 @@ impl Board {
                 // Reduction
                 all_searched = false;
 
-                let reduction = if remaining_depth >= 6 { 2 } else { 1 };
+                let reduction = 1;
+                // let reduction = if remaining_depth >= 6 { 2 } else { 1 };
                 let reduced_remaining = remaining_depth_next - reduction;
 
                 let reduced_score = -self.alpha_beta(

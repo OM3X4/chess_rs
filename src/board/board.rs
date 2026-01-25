@@ -18,6 +18,7 @@ pub struct Board {
     pub eval: i32, // Always white favor
     pub history: Vec<u64>,
     pub last_irreversible_move: u64,
+    pub number_of_pieces: u32
 }
 
 impl Board {
@@ -33,6 +34,7 @@ impl Board {
             eval: 0,
             history: Vec::new(),
             last_irreversible_move: 0,
+            number_of_pieces: 0
         };
 
         board.piece_at = board.generate_piece_at();
@@ -52,6 +54,7 @@ impl Board {
         self.en_passant = None;
         self.castling = 15;
         self.eval = 0;
+        self.number_of_pieces = 32;
         self.history = vec![self.hash];
     } //
     pub fn reset_to_zero(&mut self) {
@@ -63,6 +66,7 @@ impl Board {
         self.en_passant = None;
         self.castling = 0;
         self.eval = 0;
+        self.number_of_pieces = 0;
         self.history = vec![self.hash];
     } //
     pub fn get_all_white_bits(&self) -> BitBoard {
@@ -138,6 +142,7 @@ impl Board {
         self.piece_at[sq as usize] = Some(piece);
         self.eval += piece.value();
         self.eval += piece.pst(sq);
+        self.number_of_pieces += 1;
 
         self.hash ^= Z_PIECE[piece.piece_index()][sq as usize];
     } //
@@ -150,6 +155,8 @@ impl Board {
         self.piece_at[sq as usize] = None;
         self.eval -= piece.value();
         self.eval -= piece.pst(sq);
+        self.number_of_pieces -= 1;
+
 
         self.hash ^= Z_PIECE[piece.piece_index()][sq as usize];
     } //
@@ -244,6 +251,7 @@ impl Board {
         self.hash = self.compute_hash();
         self.eval = self.evaluate();
         self.history = vec![self.hash];
+        self.number_of_pieces = self.generate_pieces_count();
     } //
 
     pub fn to_fen(&self) -> String {
@@ -457,5 +465,15 @@ impl Board {
             }
         }
         None
+    }//
+
+    pub fn generate_pieces_count(&self) -> u32 {
+        let mut count = 0;
+        for i in 0..64 {
+            if self.piece_at(i) != None {
+                count += 1;
+            }
+        }
+        return count;
     }
 } //

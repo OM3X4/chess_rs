@@ -99,13 +99,13 @@ impl PieceType {
         } else {
             return match self.piece_index() {
                 0 => MG_PAWN_TABLE[square as usize ^ 56],
-                1 => MG_KING_TABLE[square as usize ^ 56],
+                1 => MG_KNIGHT_TABLE[square as usize ^ 56],
                 2 => MG_BISHOP_TABLE[square as usize ^ 56],
                 3 => MG_ROOK_TABLE[square as usize ^ 56],
                 4 => MG_QUEEN_TABLE[square as usize ^ 56],
                 5 => MG_KING_TABLE[square as usize ^ 56],
                 6 => -MG_PAWN_TABLE[square as usize],
-                7 => -MG_KING_TABLE[square as usize],
+                7 => -MG_KNIGHT_TABLE[square as usize],
                 8 => -MG_BISHOP_TABLE[square as usize],
                 9 => -MG_ROOK_TABLE[square as usize],
                 10 => -MG_QUEEN_TABLE[square as usize],

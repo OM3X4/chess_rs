@@ -482,7 +482,7 @@ impl Board {
         println!("{}", board_string);
     } //
 
-    pub fn probe_opening(&self) -> Option<Move> {
+    pub fn probe_opening(&mut self) -> Option<Move> {
         let mut lo = 0;
         let mut hi = OPENING_BOOK.len();
 
@@ -494,9 +494,19 @@ impl Board {
 
             if h == hash {
                 let moves = unsafe { OPENING_BOOK.get_unchecked(mid).moves };
+                let valid_moves = self.generate_moves().iter().map(|mv| mv.to_uci()).collect::<Vec<String>>();
                 let mut rng = rand::thread_rng();
                 let index = rng.gen_range(0..moves.len());
-                return Some(Move(moves[index]));
+
+                let mv = Move(moves[index]);
+
+                if valid_moves.contains(&mv.to_uci()) {
+                    return Some(mv);
+                } else {
+                    return None;
+                }
+
+
             } else if h < hash {
                 lo = mid + 1;
             } else {

@@ -7,7 +7,7 @@ use std::time::Duration;
 
 use crate::board::constants::{RANK_1, RANK_8};
 
-use super::constants::{MVV_LVA};
+use super::constants::MVV_LVA;
 use super::zobrist::{Z_CASTLING, Z_PIECE, Z_SIDE};
 use super::{Board, Bound, Move, PieceType, TTEntry, TranspositionTable, Turn};
 
@@ -180,7 +180,6 @@ impl Board {
         h
     } //
 
-
     #[inline(always)]
     pub fn pieces_score(&self) -> i32 {
         let bbs = &self.bitboards.0;
@@ -207,9 +206,10 @@ impl Board {
 
         phase = phase.clamp(0, MAX_PHASE);
 
-        let pst_score = (self.mg_pst_eval * phase + self.eg_pst_eval * (MAX_PHASE - phase)) / MAX_PHASE;
+        let pst_score =
+            (self.mg_pst_eval * phase + self.eg_pst_eval * (MAX_PHASE - phase)) / MAX_PHASE;
 
-        let mut score = self.mat_eval + pst_score + self.generate_mobility_eval();
+        let mut score = self.mat_eval + pst_score;
 
         score
     } //
@@ -480,7 +480,6 @@ impl Board {
                 self.unmake_move(unmake_move);
                 continue;
             };
-
             found_legal = true;
 
             let mut score: i32 = 0;
@@ -607,7 +606,7 @@ impl Board {
         is_quiesense: bool,
         is_move_ordering: bool,
         maximum_time: Duration,
-        tt_global: Option<&mut TranspositionTable>
+        tt_global: Option<&mut TranspositionTable>,
     ) -> Move {
         let mut moves = self.generate_moves();
         partition_by_bool(&mut moves, |mv| mv.is_capture());
@@ -700,7 +699,7 @@ impl Board {
         is_quiesense: bool,
         is_move_ordering: bool,
         maximum_time: Duration,
-        tt : Option<&mut TranspositionTable>,
+        tt: Option<&mut TranspositionTable>,
     ) -> Move {
         if let Some(opening) = self.probe_opening() {
             return opening;
@@ -715,7 +714,7 @@ impl Board {
             is_quiesense,
             is_move_ordering,
             maximum_time,
-            tt
+            tt,
         )
     } //
 
@@ -812,15 +811,17 @@ mod test {
         init_bishop_magics();
 
         let mut board = board::Board::new();
-        board.load_from_fen("rnbqr1k1/ppppbppp/4pn2/8/2PP1B2/P4N1P/1P2PPP1/RN1QKB1R b KQ - 0 6");
+        board.load_from_fen("4r3/1pkb4/2p5/P2p1p2/P4Pn1/R1P5/3QP3/1N2K1r1 w - - 0 34");
         let start = std::time::Instant::now();
-        for (sq , piece) in board.piece_at.iter().enumerate() {
-            if let Some(piece) = piece {
-                println!("{:?} at {}: {} " , piece , sq ,piece.pst(sq as u8 , false));
-            }
-        }
 
-
+        dbg!(
+            board
+                .generate_moves()
+                .iter()
+                .map(|mv| mv.to_uci())
+                .collect::<Vec<String>>()
+        );
+        dbg!(board.is_king_in_check(crate::board::Turn::WHITE));
 
         dbg!(start.elapsed());
 

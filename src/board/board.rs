@@ -18,10 +18,10 @@ pub struct Board {
     pub piece_at: [Option<PieceType>; 64],
     pub occupied: BitBoard,
     pub hash: u64,
-    pub en_passant: Option<u8>,
+    pub en_passant: Option<usize>,
     pub castling: u8,
     pub history: Vec<u64>,
-    pub last_irreversible_move: u64,
+    pub last_irreversible_move: usize,
     pub mat_eval: i32,      // Always white favor
     pub mg_pst_eval: i32,   // Always white favor
     pub eg_pst_eval: i32,   // Always white favor
@@ -117,7 +117,7 @@ impl Board {
         return BitBoard(self.get_all_white_bits().0 | self.get_all_black_bits().0);
     } //
 
-    pub fn piece_at(&self, square: u64) -> Option<PieceType> {
+    pub fn piece_at(&self, square: usize) -> Option<PieceType> {
         let bb = 1u64 << square;
         if self.bitboards.0[PieceType::BlackKing.piece_index()].0 & bb != 0 {
             return Some(PieceType::BlackKing);
@@ -153,47 +153,47 @@ impl Board {
     pub fn generate_piece_at(&self) -> [Option<PieceType>; 64] {
         let mut piece_at = [None; 64];
         for square in 0..64 {
-            piece_at[square] = self.piece_at(square as u64);
+            piece_at[square] = self.piece_at(square);
         }
         piece_at
     } //
 
-    pub fn add_piece(&mut self, piece: PieceType, sq: u8) {
+    pub fn add_piece(&mut self, piece: PieceType, sq: usize) {
         let mask = 1u64 << sq;
 
         self.bitboards.0[piece.piece_index()].0 |= mask;
         self.occupied.0 |= mask;
-        self.piece_at[sq as usize] = Some(piece);
+        self.piece_at[sq] = Some(piece);
         self.mat_eval += piece.value();
         self.number_of_pieces += 1;
         if piece == PieceType::WhitePawn || piece == PieceType::BlackPawn {
             self.number_of_pawns += 1;
         }
         // count mobility
-        self.mobility_eval += piece.mobility_score(sq as usize, self.occupied.0);
+        self.mobility_eval += piece.mobility_score(sq, self.occupied.0);
         self.mg_pst_eval += piece.pst(sq, false);
         self.eg_pst_eval += piece.pst(sq, true);
 
-        self.hash ^= Z_PIECE[piece.piece_index()][sq as usize];
+        self.hash ^= Z_PIECE[piece.piece_index()][sq];
     } //
 
-    pub fn remove_piece(&mut self, piece: PieceType, sq: u8) {
+    pub fn remove_piece(&mut self, piece: PieceType, sq: usize) {
         let mask = 1u64 << sq;
 
         self.bitboards.0[piece.piece_index()].0 &= !mask;
         self.occupied.0 &= !mask;
-        self.piece_at[sq as usize] = None;
+        self.piece_at[sq] = None;
         self.mat_eval -= piece.value();
         self.number_of_pieces -= 1;
         if piece == PieceType::WhitePawn || piece == PieceType::BlackPawn {
             self.number_of_pawns -= 1;
         }
         // count mobility
-        self.mobility_eval -= piece.mobility_score(sq as usize, self.occupied.0);
+        self.mobility_eval -= piece.mobility_score(sq, self.occupied.0);
         self.mg_pst_eval -= piece.pst(sq, false);
         self.eg_pst_eval -= piece.pst(sq, true);
 
-        self.hash ^= Z_PIECE[piece.piece_index()][sq as usize];
+        self.hash ^= Z_PIECE[piece.piece_index()][sq];
     } //
 
     pub fn load_from_fen(&mut self, fen: &str) {
@@ -229,8 +229,8 @@ impl Board {
             if let Some(en_passant) = splitted.get(3) {
                 if en_passant != &"-" {
                     let bytes = en_passant.as_bytes();
-                    let file = bytes[0] - b'a'; // 'a'..'h' -> 0..7
-                    let rank = bytes[1] - b'1'; // '1'..'8' -> 0..7
+                    let file = (bytes[0] - b'a') as usize; // 'a'..'h' -> 0..7
+                    let rank = (bytes[1] - b'1') as usize; // '1'..'8' -> 0..7
 
                     if rank == 2 || rank == 5 {
                         self.en_passant = Some(rank * 8 + file);
@@ -250,12 +250,12 @@ impl Board {
         let rows: Vec<&str> = position.split('/').collect();
 
         for rank in 0..8 {
-            let mut file: u64 = 0;
+            let mut file: usize = 0;
             for char in rows[rank].chars() {
                 if let Some(number) = char.to_digit(10) {
-                    file += number as u64;
+                    file += (number as usize);
                 } else {
-                    let square_index = (7 - rank as u64) * 8 + file;
+                    let square_index = (7 - rank) * 8 + file;
                     let bit = 1u64 << square_index;
                     let target_board = match char {
                         'P' => Some(&mut self.bitboards.0[PieceType::WhitePawn.piece_index()]),
@@ -378,10 +378,10 @@ impl Board {
 
         fen.push(' ');
         if let Some(en_passant) = self.en_passant {
-            let file = en_passant % 8;
-            let rank = en_passant / 8;
-            fen.push((b'a' + file as u8) as char);
-            fen.push((b'1' + rank as u8) as char);
+            let file: u8 = (en_passant % 8) as u8;
+            let rank: u8 = (en_passant / 8) as u8;
+            fen.push((b'a' + file) as char);
+            fen.push((b'1' + rank) as char);
         } else {
             fen.push('-');
         }
@@ -440,7 +440,7 @@ impl Board {
         if len < 0 {
             return false;
         }
-        for i in (self.last_irreversible_move as usize..len).rev() {
+        for i in (self.last_irreversible_move..len).rev() {
             if self.history[i] == hash {
                 count += 1;
                 if count == 3 {
@@ -521,8 +521,8 @@ impl Board {
         let mut mg_score = 0;
         for (sq, piece) in self.piece_at.iter().enumerate() {
             if let Some(piece) = piece {
-                eg_score += piece.pst(sq as u8, true);
-                mg_score += piece.pst(sq as u8, false);
+                eg_score += piece.pst(sq, true);
+                mg_score += piece.pst(sq, false);
             }
         }
         return (mg_score, eg_score);

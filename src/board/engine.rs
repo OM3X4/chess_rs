@@ -184,19 +184,19 @@ impl Board {
     pub fn pieces_score(&self) -> i32 {
         let bbs = &self.bitboards.0;
 
-        let white = bbs[0].0.count_ones() as i32 * 100   // pawn
-        + bbs[1].0.count_ones() as i32 * 300   // knight
-        + bbs[2].0.count_ones() as i32 * 300   // bishop
-        + bbs[3].0.count_ones() as i32 * 500   // rook
-        + bbs[4].0.count_ones() as i32 * 900; // queen
+        let white = bbs[0].0.count_ones() * 100   // pawn
+        + bbs[1].0.count_ones() * 300   // knight
+        + bbs[2].0.count_ones() * 300   // bishop
+        + bbs[3].0.count_ones() * 500   // rook
+        + bbs[4].0.count_ones() * 900; // queen
 
-        let black = bbs[6].0.count_ones() as i32 * 100
-            + bbs[7].0.count_ones() as i32 * 300
-            + bbs[8].0.count_ones() as i32 * 300
-            + bbs[9].0.count_ones() as i32 * 500
-            + bbs[10].0.count_ones() as i32 * 900;
+        let black = bbs[6].0.count_ones() * 100
+            + bbs[7].0.count_ones() * 300
+            + bbs[8].0.count_ones() * 300
+            + bbs[9].0.count_ones() * 500
+            + bbs[10].0.count_ones() * 900;
 
-        white - black
+        (white - black) as i32
     } //
 
     pub fn evaluate(&mut self) -> i32 {
@@ -221,7 +221,7 @@ impl Board {
         }
         let mut victim;
 
-        victim = self.piece_at[mv.to() as usize].unwrap_or_else(|| {
+        victim = self.piece_at[mv.to()].unwrap_or_else(|| {
             println!("{}", mv.to());
             println!("{}", mv.from());
             println!("{}", self.to_fen());
@@ -229,7 +229,7 @@ impl Board {
         });
         let attacker = mv.piece();
 
-        MVV_LVA[(victim.piece_index() % 6) as usize][(attacker.piece_index() % 6) as usize]
+        MVV_LVA[(victim.piece_index() % 6)][(attacker.piece_index() % 6)]
     } //
 
     pub fn sort_by_mvv_lva(&mut self, moves: &mut SmallVec<[Move; 256]>) {
@@ -326,8 +326,8 @@ impl Board {
 
     pub fn alpha_beta(
         &mut self,
-        ply: i32,
-        remaining_depth: i32,
+        ply: usize,
+        remaining_depth: i8,
         mut alpha: i32,
         mut beta: i32,
         tt: &mut TranspositionTable,
@@ -353,11 +353,11 @@ impl Board {
             if let Some(entry) = tt.probe(self.hash) {
                 best_move_from_tt = Some(entry.best_move);
 
-                if entry.depth >= remaining_depth as i8 {
+                if entry.depth >= remaining_depth {
                     match entry.bound {
                         Bound::Exact => {
                             let score = if entry.score.abs() > 29_000 {
-                                entry.score - ply
+                                entry.score - (ply as i32)
                             } else {
                                 entry.score
                             };
@@ -416,7 +416,7 @@ impl Board {
         let mut moves = SmallVec::new();
         self.generate_pesudo_moves(&mut moves);
 
-        self.sort_moves_by_score(&mut moves, ply as usize, killer_moves, best_move_from_tt);
+        self.sort_moves_by_score(&mut moves, ply, killer_moves, best_move_from_tt);
 
         let iter = moves.iter();
 
@@ -551,13 +551,13 @@ impl Board {
 
             if alpha >= beta && is_alpha_beta {
                 if !mv.is_capture() {
-                    if let Some(killer_move_1) = killer_moves[ply as usize][0] {
+                    if let Some(killer_move_1) = killer_moves[ply][0] {
                         if *mv != killer_move_1 {
-                            killer_moves[ply as usize][1] = Some(killer_move_1);
-                            killer_moves[ply as usize][0] = Some(*mv);
+                            killer_moves[ply][1] = Some(killer_move_1);
+                            killer_moves[ply][0] = Some(*mv);
                         }
                     } else {
-                        killer_moves[ply as usize][0] = Some(*mv);
+                        killer_moves[ply][0] = Some(*mv);
                     }
                 }
                 all_searched = false;
@@ -567,15 +567,15 @@ impl Board {
 
         if !found_legal {
             if self.is_king_in_check(self.turn) {
-                let mate = 30_000;
-                best_score = -mate - remaining_depth;
+                let mate: i32 = 30_000;
+                best_score = -mate - (remaining_depth as i32);
             } else {
                 best_score = 0; // Stalemate
             }
         };
 
         let tt_score = if best_score.abs() > 29_000 {
-            best_score + ply
+            best_score + (ply as i32)
         } else {
             best_score
         };
@@ -644,7 +644,7 @@ impl Board {
 
                 let score = -self.alpha_beta(
                     1,
-                    current_depth - 1,
+                    (current_depth - 1) as i8,
                     -beta,
                     -alpha,
                     &mut tt,

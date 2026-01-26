@@ -12,18 +12,4 @@ fn main() {
     let start = std::time::Instant::now();
     dbg!(board.perft(0,5));
     dbg!(start.elapsed());
-
-    // let args: Vec<String> = std::env::args().collect();
-
-    // if args[1] == "perft" {
-    //     let fen = &args[2];
-    //     let depth: u32 = args[3].parse().unwrap();
-
-    //     let mut board = Board::new();
-    //     board.load_from_fen(fen);
-
-    //     let nodes = board.perft(0 , depth as i32);
-
-    //     println!("{}", nodes);
-    // }
 }

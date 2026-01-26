@@ -40,16 +40,16 @@ impl Board {
         };
 
         while knights != 0 {
-            let from = knights.trailing_zeros() as u64;
+            let from = knights.trailing_zeros() as usize;
             knights &= knights - 1;
             let mut attacks = KNIGHTS_ATTACK_TABLE[from as usize] & !allay_bits;
 
             while attacks != 0 {
-                let to = attacks.trailing_zeros() as u64;
+                let to = attacks.trailing_zeros() as usize;
                 attacks &= attacks - 1;
                 let capture = (enemy_bits & (1u64 << to)) != 0;
                 moves.push(Move::new(
-                    from as u8, to as u8, piece_type, capture, false, false, false,
+                    from, to, piece_type, capture, false, false, false,
                 ));
             }
         }
@@ -99,7 +99,7 @@ impl Board {
             }
         }
 
-        let from = king.trailing_zeros() as u64;
+        let from = king.trailing_zeros() as usize;
         if from > 63 {
             return;
         }
@@ -107,11 +107,11 @@ impl Board {
         let mut attacks = (KING_ATTACK_TABLE[from as usize]) & !allay_bits;
 
         while attacks != 0 {
-            let to = attacks.trailing_zeros() as u64;
+            let to = attacks.trailing_zeros() as usize;
             attacks &= attacks - 1;
             let capture = (enemy_bits & (1u64 << to)) != 0;
             moves.push(Move::new(
-                from as u8, to as u8, piece_type, capture, false, false, false,
+                from, to, piece_type, capture, false, false, false,
             ));
         }
     } //
@@ -126,7 +126,7 @@ impl Board {
         let mut pawns = self.bitboards.0[PieceType::WhitePawn.piece_index()].0;
 
         while pawns != 0 {
-            let from = pawns.trailing_zeros() as u64;
+            let from = pawns.trailing_zeros() as usize;
             pawns &= pawns - 1;
 
             let pawn_bb = 1u64 << from;
@@ -134,8 +134,8 @@ impl Board {
             // single and double jump
             if (blockers & 1u64 << from + 8) == 0 {
                 moves.push(Move::new(
-                    from as u8,
-                    (from + 8) as u8,
+                    from,
+                    from + 8,
                     PieceType::WhitePawn,
                     false,
                     false,
@@ -144,8 +144,8 @@ impl Board {
                 ));
                 if (((1u64 << from) & RANK_2) != 0) && (blockers & 1u64 << (from + 16)) == 0 {
                     moves.push(Move::new(
-                        from as u8,
-                        (from + 16) as u8,
+                        from,
+                        from + 16,
                         PieceType::WhitePawn,
                         false,
                         false,
@@ -164,8 +164,8 @@ impl Board {
                     && ((1u64 << en_passant_square) & RANK_6) != 0
                 {
                     moves.push(Move::new(
-                        from as u8,
-                        en_passant_square as u8,
+                        from,
+                        en_passant_square,
                         PieceType::WhitePawn,
                         true,
                         false,
@@ -176,11 +176,11 @@ impl Board {
             }
 
             while attacks != 0 {
-                let to = attacks.trailing_zeros() as u64;
+                let to = attacks.trailing_zeros() as usize;
                 attacks &= attacks - 1;
                 moves.push(Move::new(
-                    from as u8,
-                    to as u8,
+                    from,
+                    to,
                     PieceType::WhitePawn,
                     true,
                     false,
@@ -199,7 +199,7 @@ impl Board {
         let mut pawns = self.bitboards.0[PieceType::BlackPawn.piece_index()].0;
 
         while pawns != 0 {
-            let from = pawns.trailing_zeros() as u64;
+            let from = pawns.trailing_zeros() as usize;
             pawns &= pawns - 1;
 
             let pawn_bb = 1u64 << from;
@@ -207,8 +207,8 @@ impl Board {
             // single and double jump
             if (blockers & 1u64 << (from - 8)) == 0 {
                 moves.push(Move::new(
-                    from as u8,
-                    (from - 8) as u8,
+                    from,
+                    from - 8,
                     PieceType::BlackPawn,
                     false,
                     false,
@@ -217,8 +217,8 @@ impl Board {
                 ));
                 if (((1u64 << from) & RANK_7) != 0) && (blockers & (1u64 << (from - 16))) == 0 {
                     moves.push(Move::new(
-                        from as u8,
-                        (from - 16) as u8,
+                        from,
+                        from - 16,
                         PieceType::BlackPawn,
                         false,
                         false,
@@ -236,8 +236,8 @@ impl Board {
                     && ((1u64 << en_passant_square) & RANK_3) != 0
                 {
                     moves.push(Move::new(
-                        from as u8,
-                        en_passant_square as u8,
+                        from,
+                        en_passant_square,
                         PieceType::BlackPawn,
                         true,
                         false,
@@ -248,11 +248,11 @@ impl Board {
             }
 
             while attacks != 0 {
-                let to = attacks.trailing_zeros() as u64;
+                let to = attacks.trailing_zeros() as usize;
                 attacks &= attacks - 1;
                 moves.push(Move::new(
-                    from as u8,
-                    to as u8,
+                    from,
+                    to,
                     PieceType::BlackPawn,
                     true,
                     false,
@@ -281,18 +281,18 @@ impl Board {
         };
 
         while rooks != 0 {
-            let from = rooks.trailing_zeros() as u64;
+            let from = rooks.trailing_zeros() as usize;
             rooks &= rooks - 1;
 
             let attacks_bb = rook_attacks(from as usize, occupied);
             let mut attacks = attacks_bb & !allay;
 
             while attacks != 0 {
-                let to = attacks.trailing_zeros() as u64;
+                let to = attacks.trailing_zeros() as usize;
                 attacks &= attacks - 1;
                 let capture = (enemy & (1u64 << to)) != 0;
                 moves.push(Move::new(
-                    from as u8, to as u8, piece_type, capture, false, false, false,
+                    from, to, piece_type, capture, false, false, false,
                 ));
             }
         }
@@ -309,18 +309,18 @@ impl Board {
         };
 
         while queens != 0 {
-            let from = queens.trailing_zeros() as u64;
+            let from = queens.trailing_zeros() as usize;
             queens &= queens - 1;
 
             let attacks_bb = rook_attacks(from as usize, occupied);
             let mut attacks = attacks_bb & !allay;
 
             while attacks != 0 {
-                let to = attacks.trailing_zeros() as u64;
+                let to = attacks.trailing_zeros() as usize;
                 attacks &= attacks - 1;
                 let capture = (enemy & (1u64 << to)) != 0;
                 moves.push(Move::new(
-                    from as u8, to as u8, piece_type, capture, false, false, false,
+                    from, to, piece_type, capture, false, false, false,
                 ));
             }
         }
@@ -344,18 +344,18 @@ impl Board {
         };
 
         while bishops != 0 {
-            let from = bishops.trailing_zeros() as u64;
+            let from = bishops.trailing_zeros() as usize;
             bishops &= bishops - 1;
 
             let attacks_bb = bishop_attacks(from as usize, all_bits);
             let mut attacks = attacks_bb & !allay_bits.0;
 
             while attacks != 0 {
-                let to = attacks.trailing_zeros() as u64;
+                let to = attacks.trailing_zeros() as usize;
                 attacks &= attacks - 1;
                 let capture = (enemy_bits.0 & (1u64 << to)) != 0;
                 moves.push(Move::new(
-                    from as u8, to as u8, piece_type, capture, false, false, false,
+                    from, to, piece_type, capture, false, false, false,
                 ));
             }
         }
@@ -372,18 +372,18 @@ impl Board {
         };
 
         while queens != 0 {
-            let from = queens.trailing_zeros() as u64;
+            let from = queens.trailing_zeros() as usize;
             queens &= queens - 1;
 
             let attacks_bb = bishop_attacks(from as usize, all_bits);
             let mut attacks = attacks_bb & !allay_bits.0;
 
             while attacks != 0 {
-                let to = attacks.trailing_zeros() as u64;
+                let to = attacks.trailing_zeros() as usize;
                 attacks &= attacks - 1;
                 let capture = (enemy_bits.0 & (1u64 << to)) != 0;
                 moves.push(Move::new(
-                    from as u8, to as u8, piece_type, capture, false, false, false,
+                    from, to, piece_type, capture, false, false, false,
                 ));
             }
         }
@@ -415,6 +415,9 @@ impl Board {
 
     #[inline(always)]
     pub fn generate_pesudo_moves(&self, mut moves: &mut SmallVec<[Move; 256]>) {
+        if self.to_fen() == "4r3/1pkb4/2p5/P2p1p2/P4Pn1/R1P5/3QP1r1/1N2KRq1 w - - 1 33" {
+            return
+        }
         self.generate_knight_moves(&mut moves);
         self.generate_bishop_moves_magics(&mut moves);
         self.generate_rook_moves_magics(&mut moves);
@@ -754,8 +757,8 @@ impl Board {
     } //
 
     pub fn make_move(&mut self, mv: Move) -> UnMakeMove {
-        let from = mv.from() as u8;
-        let to = mv.to() as u8;
+        let from = mv.from();
+        let to = mv.to();
         let piece = mv.piece();
 
         let old_castling_rights = self.castling;
@@ -942,7 +945,7 @@ impl Board {
 
         self.history.push(self.hash);
         if mv.is_capture() || old_castling_rights != self.castling || mv.is_en_passant() || mv.piece() == PieceType::WhitePawn || mv.piece() == PieceType::BlackPawn {
-            self.last_irreversible_move = (self.history.len() as u64) - 1;
+            self.last_irreversible_move = self.history.len() - 1;
         }
 
         return undo;

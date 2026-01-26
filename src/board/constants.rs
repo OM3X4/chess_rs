@@ -288,12 +288,12 @@ const fn get_queen_rays_inclusive(sq: usize) -> u64 {
     // Start with the bit for the square itself set to 1
     let mut attacks = 1u64 << sq;
 
-    let r = (sq / 8) as i8;
-    let f = (sq % 8) as i8;
+    let r= (sq / 8) as i8;
+    let f= (sq % 8) as i8;
 
     // Directions: (rank_change, file_change)
     // N, S, E, W, NE, NW, SE, SW
-    let directions = [
+    let directions: [(i8 , i8);8] = [
         (1, 0),
         (-1, 0),
         (0, 1),

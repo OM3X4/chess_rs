@@ -79,37 +79,37 @@ impl PieceType {
     pub fn value(self) -> i32 {
         unsafe { *PIECE_VALUE.get_unchecked(self as usize) }
     }
-    pub fn pst(&self, square: u8, is_eg: bool) -> i32 {
+    pub fn pst(&self, square: usize, is_eg: bool) -> i32 {
         if is_eg {
             return match self.piece_index() {
-                0 => EG_PAWN_TABLE[square as usize ^ 56],
-                1 => EG_KNIGHT_TABLE[square as usize ^ 56],
-                2 => EG_BISHOP_TABLE[square as usize ^ 56],
-                3 => EG_ROOK_TABLE[square as usize ^ 56],
-                4 => EG_QUEEN_TABLE[square as usize ^ 56],
-                5 => EG_KING_TABLE[square as usize ^ 56],
-                6 => -EG_PAWN_TABLE[square as usize],
-                7 => -EG_KNIGHT_TABLE[square as usize],
-                8 => -EG_BISHOP_TABLE[square as usize],
-                9 => -EG_ROOK_TABLE[square as usize],
-                10 => -EG_QUEEN_TABLE[square as usize],
-                11 => -EG_KING_TABLE[square as usize],
+                0 => EG_PAWN_TABLE[square ^ 56],
+                1 => EG_KNIGHT_TABLE[square ^ 56],
+                2 => EG_BISHOP_TABLE[square ^ 56],
+                3 => EG_ROOK_TABLE[square ^ 56],
+                4 => EG_QUEEN_TABLE[square ^ 56],
+                5 => EG_KING_TABLE[square ^ 56],
+                6 => -EG_PAWN_TABLE[square],
+                7 => -EG_KNIGHT_TABLE[square],
+                8 => -EG_BISHOP_TABLE[square],
+                9 => -EG_ROOK_TABLE[square],
+                10 => -EG_QUEEN_TABLE[square],
+                11 => -EG_KING_TABLE[square],
                 _ => 0,
             };
         } else {
             return match self.piece_index() {
-                0 => MG_PAWN_TABLE[square as usize ^ 56],
-                1 => MG_KNIGHT_TABLE[square as usize ^ 56],
-                2 => MG_BISHOP_TABLE[square as usize ^ 56],
-                3 => MG_ROOK_TABLE[square as usize ^ 56],
-                4 => MG_QUEEN_TABLE[square as usize ^ 56],
-                5 => MG_KING_TABLE[square as usize ^ 56],
-                6 => -MG_PAWN_TABLE[square as usize],
-                7 => -MG_KNIGHT_TABLE[square as usize],
-                8 => -MG_BISHOP_TABLE[square as usize],
-                9 => -MG_ROOK_TABLE[square as usize],
-                10 => -MG_QUEEN_TABLE[square as usize],
-                11 => -MG_KING_TABLE[square as usize],
+                0 => MG_PAWN_TABLE[square ^ 56],
+                1 => MG_KNIGHT_TABLE[square ^ 56],
+                2 => MG_BISHOP_TABLE[square ^ 56],
+                3 => MG_ROOK_TABLE[square ^ 56],
+                4 => MG_QUEEN_TABLE[square ^ 56],
+                5 => MG_KING_TABLE[square ^ 56],
+                6 => -MG_PAWN_TABLE[square],
+                7 => -MG_KNIGHT_TABLE[square],
+                8 => -MG_BISHOP_TABLE[square],
+                9 => -MG_ROOK_TABLE[square],
+                10 => -MG_QUEEN_TABLE[square],
+                11 => -MG_KING_TABLE[square],
                 _ => 0,
             };
         }
@@ -158,8 +158,8 @@ pub struct Move(u32);
 impl Move {
     #[inline(always)]
     pub fn new(
-        from: u8,
-        to: u8,
+        from: usize,
+        to: usize,
         piece: PieceType,
         capture: bool,
         castling: bool,
@@ -177,13 +177,13 @@ impl Move {
     }
 
     #[inline(always)]
-    pub fn from(self) -> u8 {
-        (self.0 & 0b111111) as u8
+    pub fn from(self) -> usize {
+        (self.0 & 0b111111) as usize
     }
 
     #[inline(always)]
-    pub fn to(self) -> u8 {
-        ((self.0 >> 6) & 0b111111) as u8
+    pub fn to(self) -> usize {
+        ((self.0 >> 6) & 0b111111) as usize
     }
 
     #[inline(always)]
@@ -226,13 +226,13 @@ impl Move {
 
         debug_assert!(bytes.len() >= 4);
 
-        let file_from = bytes[0] - b'a';
-        let rank_from = bytes[1] - b'1';
+        let file_from = (bytes[0] - b'a') as usize;
+        let rank_from = (bytes[1] - b'1') as usize;
         let from = rank_from * 8 + file_from;
 
-        let file_to = bytes[2] - b'a';
-        let rank_to = bytes[3] - b'1';
-        let to: u8 = rank_to * 8 + file_to;
+        let file_to = (bytes[2] - b'a') as usize;
+        let rank_to = (bytes[3] - b'1') as usize;
+        let to: usize = rank_to * 8 + file_to;
 
         // Handle en passant
         if let Some(en_passant) = board.en_passant {
@@ -241,7 +241,7 @@ impl Move {
                 Turn::WHITE => PieceType::WhitePawn,
             };
 
-            let piece = board.piece_at[from as usize].unwrap();
+            let piece = board.piece_at[from].unwrap();
 
             if en_passant == to && piece == required_piece {
                 return Move::new(from, to, piece, true, false, false, true);
@@ -282,8 +282,8 @@ impl Move {
 } //
 
 pub struct UnMakeMove {
-    from: u8,
-    to: u8,
+    from: usize,
+    to: usize,
     piece: PieceType,
     captured: Option<PieceType>,
     occupied: BitBoard,
@@ -291,12 +291,12 @@ pub struct UnMakeMove {
     is_en_passant: bool,
     hash: u64,
     castling: u8,
-    en_passant: Option<u8>,
+    en_passant: Option<usize>,
     mat_eval: i32,
     mg_pst_eval: i32,
     eg_pst_eval: i32,
     mobility_eval: i32,
-    last_irreversible_move: u64,
+    last_irreversible_move: usize,
 }
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]

@@ -209,7 +209,7 @@ impl Board {
 
         let pst_score = (self.mg_pst_eval * phase + self.eg_pst_eval * (MAX_PHASE - phase)) / MAX_PHASE;
 
-        let mut score = self.mat_eval + pst_score;
+        let mut score = self.mat_eval + pst_score + self.generate_mobility_eval();
 
         score
     } //
@@ -801,7 +801,7 @@ impl Board {
 mod test {
     use std::collections::HashMap;
 
-    use crate::board::{Move, board};
+    use crate::board::{Move, PieceType, board};
 
     #[test]
     fn test() {
@@ -812,13 +812,18 @@ mod test {
         init_bishop_magics();
 
         let mut board = board::Board::new();
-        board.make_move(Move::from_uci("e2e4", &board));
-        println!("{}", board.to_fen());
-        println!("{:x}", board.hash);
-        println!("{:x}", board.compute_hash());
-
-
+        board.load_from_fen("rnbqr1k1/ppppbppp/4pn2/8/2PP1B2/P4N1P/1P2PPP1/RN1QKB1R b KQ - 0 6");
         let start = std::time::Instant::now();
+        for (sq , piece) in board.piece_at.iter().enumerate() {
+            if let Some(piece) = piece {
+                println!("{:?} at {}: {} " , piece , sq ,piece.pst(sq as u8 , false));
+            }
+        }
+
+
+
+        dbg!(start.elapsed());
+
         // dbg!(
         //     board
         //         .generate_moves()
@@ -837,6 +842,5 @@ mod test {
         //         .engine(64, true, false, true, true, false, std::time::Duration::from_millis(5000))
         //         .to_uci()
         // );
-        dbg!(start.elapsed());
     } //
 }

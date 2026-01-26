@@ -13,7 +13,10 @@ pub use board::Board;
 use crate::board::constants::{
     EG_BISHOP_TABLE, EG_KING_TABLE, EG_PAWN_TABLE, EG_QUEEN_TABLE, EG_ROOK_TABLE,
     MG_BISHOP_TABLE, MG_KING_TABLE, MG_PAWN_TABLE, MG_QUEEN_TABLE, MG_ROOK_TABLE,
+    EG_KNIGHT_TABLE , MG_KNIGHT_TABLE , KNIGHTS_ATTACK_TABLE
 };
+use crate::board::bishop_magic::bishop_attacks;
+use crate::board::rook_magic::rook_attacks;
 
 #[derive(Copy, Clone)]
 
@@ -76,58 +79,75 @@ impl PieceType {
     pub fn value(self) -> i32 {
         unsafe { *PIECE_VALUE.get_unchecked(self as usize) }
     }
-    // pub fn pst(&self, square: u8) -> i32 {
-    //     match self.piece_index() {
-    //         0 => PAWNS_BONUS[square as usize],
-    //         1 => KING_BONUS[square as usize],
-    //         2 => BISHOPS_BONUS[square as usize],
-    //         3 => ROOK_BONUS[square as usize],
-    //         4 => QUEENS_BONUS[square as usize],
-    //         5 => KING_BONUS[square as usize],
-    //         6 => PAWNS_BONUS[square as usize ^ 56],
-    //         7 => KING_BONUS[square as usize ^ 56],
-    //         8 => BISHOPS_BONUS[square as usize ^ 56],
-    //         9 => ROOK_BONUS[square as usize ^ 56],
-    //         10 => QUEENS_BONUS[square as usize ^ 56],
-    //         11 => KING_BONUS[square as usize ^ 56],
-    //         _ => 0,
-    //     }
-    // }
     pub fn pst(&self, square: u8, is_eg: bool) -> i32 {
         if is_eg {
             return match self.piece_index() {
-                0 => EG_PAWN_TABLE[square as usize],
-                1 => EG_KING_TABLE[square as usize],
-                2 => EG_BISHOP_TABLE[square as usize],
-                3 => EG_ROOK_TABLE[square as usize],
-                4 => EG_QUEEN_TABLE[square as usize],
-                5 => EG_KING_TABLE[square as usize],
-                6 => -EG_PAWN_TABLE[square as usize ^ 56],
-                7 => -EG_KING_TABLE[square as usize ^ 56],
-                8 => -EG_BISHOP_TABLE[square as usize ^ 56],
-                9 => -EG_ROOK_TABLE[square as usize ^ 56],
-                10 => -EG_QUEEN_TABLE[square as usize ^ 56],
-                11 => -EG_KING_TABLE[square as usize ^ 56],
+                0 => EG_PAWN_TABLE[square as usize ^ 56],
+                1 => EG_KNIGHT_TABLE[square as usize ^ 56],
+                2 => EG_BISHOP_TABLE[square as usize ^ 56],
+                3 => EG_ROOK_TABLE[square as usize ^ 56],
+                4 => EG_QUEEN_TABLE[square as usize ^ 56],
+                5 => EG_KING_TABLE[square as usize ^ 56],
+                6 => -EG_PAWN_TABLE[square as usize],
+                7 => -EG_KNIGHT_TABLE[square as usize],
+                8 => -EG_BISHOP_TABLE[square as usize],
+                9 => -EG_ROOK_TABLE[square as usize],
+                10 => -EG_QUEEN_TABLE[square as usize],
+                11 => -EG_KING_TABLE[square as usize],
                 _ => 0,
             };
         } else {
             return match self.piece_index() {
-                0 => MG_PAWN_TABLE[square as usize],
-                1 => MG_KING_TABLE[square as usize],
-                2 => MG_BISHOP_TABLE[square as usize],
-                3 => MG_ROOK_TABLE[square as usize],
-                4 => MG_QUEEN_TABLE[square as usize],
-                5 => MG_KING_TABLE[square as usize],
-                6 => -MG_PAWN_TABLE[square as usize ^ 56],
-                7 => -MG_KING_TABLE[square as usize ^ 56],
-                8 => -MG_BISHOP_TABLE[square as usize ^ 56],
-                9 => -MG_ROOK_TABLE[square as usize ^ 56],
-                10 => -MG_QUEEN_TABLE[square as usize ^ 56],
-                11 => -MG_KING_TABLE[square as usize ^ 56],
+                0 => MG_PAWN_TABLE[square as usize ^ 56],
+                1 => MG_KING_TABLE[square as usize ^ 56],
+                2 => MG_BISHOP_TABLE[square as usize ^ 56],
+                3 => MG_ROOK_TABLE[square as usize ^ 56],
+                4 => MG_QUEEN_TABLE[square as usize ^ 56],
+                5 => MG_KING_TABLE[square as usize ^ 56],
+                6 => -MG_PAWN_TABLE[square as usize],
+                7 => -MG_KING_TABLE[square as usize],
+                8 => -MG_BISHOP_TABLE[square as usize],
+                9 => -MG_ROOK_TABLE[square as usize],
+                10 => -MG_QUEEN_TABLE[square as usize],
+                11 => -MG_KING_TABLE[square as usize],
                 _ => 0,
             };
         }
         0
+    }
+
+    pub fn mobility_score(self, sq: usize , occupied: u64) -> i32 {
+        return match self {
+            PieceType::WhiteBishop => {
+                2 * bishop_attacks(sq, occupied).count_ones() as i32
+            },
+            PieceType::BlackBishop => {
+                -2 * bishop_attacks(sq, occupied).count_ones() as i32
+            },
+            PieceType::WhiteRook => {
+                2 * rook_attacks(sq, occupied).count_ones() as i32
+            },
+            PieceType::BlackRook => {
+                -2 * rook_attacks(sq, occupied).count_ones() as i32
+            },
+            PieceType::BlackKnight => {
+                -2 * KNIGHTS_ATTACK_TABLE[sq].count_ones() as i32
+            },
+            PieceType::WhiteKnight => {
+                2 * KNIGHTS_ATTACK_TABLE[sq].count_ones() as i32
+            },
+            PieceType::WhiteQueen => {
+                2 * rook_attacks(sq, occupied).count_ones() as i32 + 2 * bishop_attacks(sq, occupied).count_ones() as i32
+            },
+            PieceType::BlackQueen => {
+                -2 * rook_attacks(sq, occupied).count_ones() as i32 -
+                2 * bishop_attacks(sq, occupied).count_ones() as i32
+            },
+            PieceType::WhiteQueen => {
+                2 * rook_attacks(sq, occupied).count_ones() as i32 + 2 * bishop_attacks(sq, occupied).count_ones() as i32
+            }
+            _ => 0
+        };
     }
 }
 
@@ -273,45 +293,10 @@ pub struct UnMakeMove {
     castling: u8,
     en_passant: Option<u8>,
     mat_eval: i32,
-    eg_eval: i32,
-    mg_eval: i32,
+    mg_pst_eval: i32,
+    eg_pst_eval: i32,
+    mobility_eval: i32,
     last_irreversible_move: u64,
-}
-
-impl UnMakeMove {
-    pub fn new(
-        from: u8,
-        to: u8,
-        piece: PieceType,
-        captured: Option<PieceType>,
-        is_castling: bool,
-        is_en_passant: bool,
-        occupied: BitBoard,
-        hash: u64,
-        castling: u8,
-        en_passant: Option<u8>,
-        mat_eval: i32,
-        eg_eval: i32,
-        mg_eval: i32,
-        last_irreversible_move: u64,
-    ) -> UnMakeMove {
-        UnMakeMove {
-            from,
-            to,
-            piece,
-            captured,
-            occupied,
-            hash,
-            is_castling,
-            is_en_passant,
-            castling,
-            en_passant,
-            mat_eval,
-            eg_eval,
-            mg_eval,
-            last_irreversible_move,
-        }
-    }
 }
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]

@@ -3,9 +3,13 @@ use super::zobrist::{Z_PIECE, Z_SIDE};
 use super::{BitBoard, BitBoards, GameState, Turn};
 use crate::board::Move;
 use crate::board::PieceType;
+use crate::board::bishop_magic::bishop_attacks;
+use crate::board::constants::KNIGHTS_ATTACK_TABLE;
 use crate::board::openings::{BookEntry, OPENING_BOOK};
+use crate::board::rook_magic::rook_attacks;
 use rand::Rng;
 use rand::rand_core::le;
+use shakmaty::Piece;
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct Board {
@@ -18,9 +22,10 @@ pub struct Board {
     pub castling: u8,
     pub history: Vec<u64>,
     pub last_irreversible_move: u64,
-    pub mat_eval: i32,    // Always white favor
-    pub mg_pst_eval: i32, // Always white favor
-    pub eg_pst_eval: i32, // Always white favor
+    pub mat_eval: i32,      // Always white favor
+    pub mg_pst_eval: i32,   // Always white favor
+    pub eg_pst_eval: i32,   // Always white favor
+    pub mobility_eval: i32, // Always white favor
     pub number_of_pieces: u32,
     pub number_of_pawns: u32,
 }
@@ -38,6 +43,7 @@ impl Board {
             mat_eval: 0,
             mg_pst_eval: 0,
             eg_pst_eval: 0,
+            mobility_eval: 0,
             history: Vec::new(),
             last_irreversible_move: 0,
             number_of_pieces: 0,
@@ -64,8 +70,9 @@ impl Board {
         self.en_passant = None;
         self.castling = 15;
         self.mat_eval = 0;
-        self.eg_pst_eval = 0;
         self.mg_pst_eval = 0;
+        self.eg_pst_eval = 0;
+        self.mobility_eval = 0;
         self.number_of_pieces = 32;
         self.number_of_pawns = 16;
         self.history = vec![self.hash];
@@ -79,8 +86,9 @@ impl Board {
         self.en_passant = None;
         self.castling = 0;
         self.mat_eval = 0;
-        self.eg_pst_eval = 0;
         self.mg_pst_eval = 0;
+        self.eg_pst_eval = 0;
+        self.mobility_eval = 0;
         self.number_of_pawns = 0;
         self.number_of_pieces = 0;
         self.history = vec![self.hash];
@@ -157,12 +165,14 @@ impl Board {
         self.occupied.0 |= mask;
         self.piece_at[sq as usize] = Some(piece);
         self.mat_eval += piece.value();
-        self.eg_pst_eval += piece.pst(sq, true);
-        self.mg_pst_eval += piece.pst(sq, false);
         self.number_of_pieces += 1;
         if piece == PieceType::WhitePawn || piece == PieceType::BlackPawn {
             self.number_of_pawns += 1;
         }
+        // count mobility
+        self.mobility_eval += piece.mobility_score(sq as usize, self.occupied.0);
+        self.mg_pst_eval += piece.pst(sq, false);
+        self.eg_pst_eval += piece.pst(sq, true);
 
         self.hash ^= Z_PIECE[piece.piece_index()][sq as usize];
     } //
@@ -174,12 +184,14 @@ impl Board {
         self.occupied.0 &= !mask;
         self.piece_at[sq as usize] = None;
         self.mat_eval -= piece.value();
-        self.eg_pst_eval -= piece.pst(sq, true);
-        self.mg_pst_eval -= piece.pst(sq, false);
         self.number_of_pieces -= 1;
         if piece == PieceType::WhitePawn || piece == PieceType::BlackPawn {
             self.number_of_pawns -= 1;
         }
+        // count mobility
+        self.mobility_eval -= piece.mobility_score(sq as usize, self.occupied.0);
+        self.mg_pst_eval -= piece.pst(sq, false);
+        self.eg_pst_eval -= piece.pst(sq, true);
 
         self.hash ^= Z_PIECE[piece.piece_index()][sq as usize];
     } //
@@ -274,6 +286,7 @@ impl Board {
         self.hash = self.compute_hash();
 
         self.mat_eval = self.pieces_score();
+        self.mobility_eval = self.generate_mobility_eval();
         let (mg_score, eg_score) = self.generate_pst_score();
         self.mg_pst_eval = mg_score;
         self.eg_pst_eval = eg_score;
@@ -525,5 +538,43 @@ impl Board {
             }
         }
         return count;
+    } //
+
+    pub fn generate_mobility_eval(&self) -> i32 {
+        let mut eval = 0;
+        for (sq, piece) in self.piece_at.iter().enumerate() {
+            if let Some(piece) = piece {
+                match piece {
+                    PieceType::BlackBishop => {
+                        eval += 2 * bishop_attacks(sq, self.occupied.0).count_ones() as i32;
+                    }
+                    PieceType::WhiteBishop => {
+                        eval -= 2 * bishop_attacks(sq, self.occupied.0).count_ones() as i32;
+                    }
+                    PieceType::BlackRook => {
+                        eval += 2 * rook_attacks(sq, self.occupied.0).count_ones() as i32;
+                    }
+                    PieceType::WhiteRook => {
+                        eval -= 2 * rook_attacks(sq, self.occupied.0).count_ones() as i32;
+                    }
+                    PieceType::BlackKnight => {
+                        eval -= 2 * KNIGHTS_ATTACK_TABLE[sq].count_ones() as i32;
+                    }
+                    PieceType::WhiteKnight => {
+                        eval += 2 * KNIGHTS_ATTACK_TABLE[sq].count_ones() as i32;
+                    }
+                    PieceType::BlackQueen => {
+                        eval -= 2 * bishop_attacks(sq, self.occupied.0).count_ones() as i32;
+                        eval -= 2 * rook_attacks(sq, self.occupied.0).count_ones() as i32;
+                    }
+                    PieceType::WhiteQueen => {
+                        eval += 2 * bishop_attacks(sq, self.occupied.0).count_ones() as i32;
+                        eval += 2 * rook_attacks(sq, self.occupied.0).count_ones() as i32;
+                    }
+                    _ => (),
+                }
+            }
+        }
+        eval
     } //
 } //

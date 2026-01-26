@@ -780,8 +780,9 @@ impl Board {
             castling: self.castling,
             en_passant: self.en_passant,
             mat_eval: self.mat_eval,
-            eg_eval: self.eg_pst_eval,
-            mg_eval: self.mg_pst_eval,
+            mg_pst_eval: self.mg_pst_eval,
+            eg_pst_eval: self.eg_pst_eval,
+            mobility_eval: self.mobility_eval,
             last_irreversible_move: self.last_irreversible_move,
         };
 
@@ -1020,8 +1021,9 @@ impl Board {
         self.castling = unmake_move.castling;
         self.en_passant = unmake_move.en_passant;
         self.mat_eval = unmake_move.mat_eval;
-        self.eg_pst_eval = unmake_move.eg_eval;
-        self.mg_pst_eval = unmake_move.mg_eval;
+        self.mg_pst_eval = unmake_move.mg_pst_eval;
+        self.eg_pst_eval = unmake_move.eg_pst_eval;
+        self.mobility_eval = unmake_move.mobility_eval;
         self.hash = unmake_move.hash;
         self.occupied = unmake_move.occupied;
         self.history.pop();

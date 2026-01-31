@@ -210,7 +210,7 @@ impl Board {
         let pst_score =
             (self.mg_pst_eval * phase + self.eg_pst_eval * (MAX_PHASE - phase)) / MAX_PHASE;
 
-        let mut score = self.mat_eval + pst_score;
+        let mut score = self.mat_eval + pst_score + self.mobility_eval;
 
         score
     } //

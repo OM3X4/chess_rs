@@ -171,7 +171,7 @@ impl Board {
                 self.number_of_pawns += 1;
             }
             // // count mobility
-            // self.mobility_eval += piece.mobility_score(sq, self.occupied.0);
+            self.mobility_eval += piece.mobility_score(sq, self.occupied.0);
             self.mg_pst_eval += piece.pst(sq, false);
             self.eg_pst_eval += piece.pst(sq, true);
 
@@ -192,7 +192,7 @@ impl Board {
                 self.number_of_pawns -= 1;
             }
             // // count mobility
-            // self.mobility_eval -= piece.mobility_score(sq, self.occupied.0);
+            self.mobility_eval -= piece.mobility_score(sq, self.occupied.0);
             self.mg_pst_eval -= piece.pst(sq, false);
             self.eg_pst_eval -= piece.pst(sq, true);
 

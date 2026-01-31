@@ -757,10 +757,11 @@ impl Board {
         let from = mv.from();
         let to = mv.to();
         let piece = mv.piece();
+        let is_en_passant = mv.is_en_passant();
 
         let old_castling_rights = self.castling;
 
-        let capture = match mv.is_en_passant() {
+        let capture = match is_en_passant {
             true => match self.turn {
                 Turn::WHITE => Some(PieceType::BlackPawn),
                 Turn::BLACK => Some(PieceType::WhitePawn),
@@ -774,7 +775,7 @@ impl Board {
             piece,
             captured: capture,
             hash: self.hash,
-            is_en_passant: mv.is_en_passant(),
+            is_en_passant: is_en_passant,
             occupied: self.occupied,
             is_castling: mv.is_castling(),
             castling: self.castling,
@@ -873,7 +874,7 @@ impl Board {
                 }
                 _ => (),
             };
-        } else if mv.is_en_passant() {
+        } else if is_en_passant {
             match self.turn {
                 Turn::WHITE => {
                     self.remove_piece(PieceType::BlackPawn, to - 8 , true);
@@ -943,7 +944,7 @@ impl Board {
         }
 
         self.history.push(self.hash);
-        if mv.is_capture() || old_castling_rights != self.castling || mv.is_en_passant() || mv.piece() == PieceType::WhitePawn || mv.piece() == PieceType::BlackPawn {
+        if mv.is_capture() || old_castling_rights != self.castling || is_en_passant || piece == PieceType::WhitePawn || piece == PieceType::BlackPawn {
             self.last_irreversible_move = self.history.len() - 1;
         }
 

@@ -1,7 +1,10 @@
-use chess::board::{TranspositionTable, bishop_magic::init_bishop_magics};
+use chess::board::constants::IS_STOP;
 use chess::board::rook_magic::init_rook_magics;
-use chess::board::Move;
+use chess::board::{Move, Turn};
+use chess::board::{TranspositionTable, bishop_magic::init_bishop_magics};
 use std::io::{self, Write};
+use std::sync::atomic::Ordering;
+use std::thread;
 
 fn main() {
     init_bishop_magics();
@@ -100,6 +103,30 @@ fn main() {
                 .position(|&x| x == "movetime")
                 .and_then(|i| args.get(i + 1));
 
+            let w_time_parsed = args
+                .iter()
+                .position(|&x| x == "wtime")
+                .and_then(|i| args.get(i + 1));
+
+            let b_time_parsed = args
+                .iter()
+                .position(|&x| x == "btime")
+                .and_then(|i| args.get(i + 1));
+
+            if let Some(w_time_str) = w_time_parsed {
+                let white_time = w_time_str.parse::<u64>().unwrap();
+                if board.turn == Turn::WHITE {
+                    time = std::time::Duration::from_millis(white_time / 100);
+                }
+            }
+
+            if let Some(b_time_str) = b_time_parsed {
+                let black_time = b_time_str.parse::<u64>().unwrap();
+                if board.turn == Turn::BLACK {
+                    time = std::time::Duration::from_millis(black_time / 100);
+                }
+            }
+
             if let Some(depth_str) = depth_parsed {
                 depth = depth_str.parse::<i32>().unwrap();
             }
@@ -108,27 +135,49 @@ fn main() {
                 time = std::time::Duration::from_millis(time_str.parse::<u64>().unwrap());
             }
 
-            dbg!(board.to_fen());
+            IS_STOP.store(false, Ordering::Relaxed);
 
-            println!(
-                "bestmove {}",
-                board
-                    .engine(
-                        depth,
-                        true,
-                        use_tt,
-                        use_null_move,
-                        use_lmr,
-                        use_q,
-                        use_move_ordering,
-                        time,
-                        Some(&mut tt)
-                    )
-                    .to_uci()
-            );
+            let mut board_clone = board.clone();
+            let mut tt_clone = tt.clone();
+
+            thread::spawn(move || {
+                let mv = board_clone.engine(
+                    depth,
+                    true,
+                    use_tt,
+                    use_null_move,
+                    use_lmr,
+                    use_q,
+                    use_move_ordering,
+                    time,
+                    Some(&mut tt_clone),
+                );
+
+                println!("bestmove {}", mv.to_uci());
+                io::stdout().flush().unwrap();
+            });
+
+            // println!(
+            //     "bestmove {}",
+            //     board
+            //         .engine(
+            //             depth,
+            //             true,
+            //             use_tt,
+            //             use_null_move,
+            //             use_lmr,
+            //             use_q,
+            //             use_move_ordering,
+            //             time,
+            //             Some(&mut tt),
+            //         )
+            //         .to_uci()
+            // );
             io::stdout().flush().unwrap();
         } else if input == "quit" {
             break;
+        } else if input == "stop" {
+            IS_STOP.store(true, std::sync::atomic::Ordering::Relaxed);
         }
     }
 }

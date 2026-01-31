@@ -1,3 +1,4 @@
+use crate::board::constants::IS_STOP;
 use rand::prelude::IndexedRandom;
 use smallvec::{SmallVec, smallvec};
 use std::sync::atomic::{AtomicU64, Ordering};
@@ -339,6 +340,9 @@ impl Board {
         killer_moves: &mut [[Option<Move>; 2]; 128],
     ) -> i32 {
         NODE_COUNT.fetch_add(1, Ordering::Relaxed);
+        if IS_STOP.load(Ordering::Relaxed) {
+            return alpha;
+        }
 
         if self.is_3fold_repetition() {
             return 0;
@@ -635,11 +639,6 @@ impl Board {
             let mut best_score = -30_000;
 
             for (mv, prev_score) in &mut root_moves {
-                if start_time.elapsed() > maximum_time {
-                    dbg!(searched_depth);
-                    return best_stable_move;
-                }
-
                 let unmake_move = self.make_move(*mv);
 
                 let score = -self.alpha_beta(
@@ -670,6 +669,10 @@ impl Board {
 
             if is_move_ordering {
                 root_moves.sort_by_key(|(_, score)| -*score);
+            }
+
+            if IS_STOP.load(Ordering::Relaxed) || start_time.elapsed() > maximum_time {
+                return best_stable_move;
             }
 
             // uci info print

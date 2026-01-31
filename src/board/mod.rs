@@ -1,6 +1,6 @@
 pub mod bishop_magic;
 pub mod board;
-mod constants;
+pub mod constants;
 mod engine;
 pub mod move_gen;
 mod openings;
@@ -25,6 +25,8 @@ pub struct TTEntry {
     pub score: i32, // normalized score
     pub best_move: Move,
 }
+
+#[derive(Clone)]
 pub struct TranspositionTable {
     table: Vec<Option<TTEntry>>,
     mask: usize,

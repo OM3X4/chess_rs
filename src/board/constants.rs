@@ -633,3 +633,6 @@ pub static PST: [[[i32; 64]; 12]; 2] = [
         &EG_KING_TABLE,
     ),
 ];
+
+
+pub static IS_STOP: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);

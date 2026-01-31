@@ -11,9 +11,7 @@ pub use board::Board;
 
 // use crate::board::constants::{BISHOPS_BONUS, KING_BONUS, PAWNS_BONUS, QUEENS_BONUS, ROOK_BONUS};
 use crate::board::constants::{
-    EG_BISHOP_TABLE, EG_KING_TABLE, EG_PAWN_TABLE, EG_QUEEN_TABLE, EG_ROOK_TABLE,
-    MG_BISHOP_TABLE, MG_KING_TABLE, MG_PAWN_TABLE, MG_QUEEN_TABLE, MG_ROOK_TABLE,
-    EG_KNIGHT_TABLE , MG_KNIGHT_TABLE , KNIGHTS_ATTACK_TABLE
+    EG_BISHOP_TABLE, EG_KING_TABLE, EG_KNIGHT_TABLE, EG_PAWN_TABLE, EG_QUEEN_TABLE, EG_ROOK_TABLE, KNIGHTS_ATTACK_TABLE, MG_BISHOP_TABLE, MG_KING_TABLE, MG_KNIGHT_TABLE, MG_PAWN_TABLE, MG_QUEEN_TABLE, MG_ROOK_TABLE, PST
 };
 use crate::board::bishop_magic::bishop_attacks;
 use crate::board::rook_magic::rook_attacks;
@@ -79,7 +77,7 @@ impl PieceType {
     pub fn value(self) -> i32 {
         unsafe { *PIECE_VALUE.get_unchecked(self as usize) }
     }
-    pub fn pst(&self, square: usize, is_eg: bool) -> i32 {
+    pub fn pst_old(&self, square: usize, is_eg: bool) -> i32 {
         if is_eg {
             return match self.piece_index() {
                 0 => EG_PAWN_TABLE[square ^ 56],
@@ -114,6 +112,10 @@ impl PieceType {
             };
         }
         0
+    } //
+
+    pub fn pst(self, square: usize, is_eg: bool) -> i32 {
+        return PST[is_eg as usize][self.piece_index()][square];
     }
 
     pub fn mobility_score(self, sq: usize , occupied: u64) -> i32 {

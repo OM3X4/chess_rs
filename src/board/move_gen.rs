@@ -843,65 +843,65 @@ impl Board {
             match (self.turn, to) {
                 (Turn::WHITE, 6) => {
                     // e1g1
-                    self.remove_piece(PieceType::WhiteKing, 4);
-                    self.remove_piece(PieceType::WhiteRook, 7);
-                    self.add_piece(PieceType::WhiteKing, 6);
-                    self.add_piece(PieceType::WhiteRook, 5);
+                    self.remove_piece(PieceType::WhiteKing, 4, true);
+                    self.remove_piece(PieceType::WhiteRook, 7, true);
+                    self.add_piece(PieceType::WhiteKing, 6, true);
+                    self.add_piece(PieceType::WhiteRook, 5, true);
                 }
                 (Turn::WHITE, 2) => {
                     // e1c1
-                    self.remove_piece(PieceType::WhiteKing, 4);
-                    self.remove_piece(PieceType::WhiteRook, 0);
-                    self.add_piece(PieceType::WhiteKing, 2);
-                    self.add_piece(PieceType::WhiteRook, 3);
+                    self.remove_piece(PieceType::WhiteKing, 4, true);
+                    self.remove_piece(PieceType::WhiteRook, 0, true);
+                    self.add_piece(PieceType::WhiteKing, 2, true);
+                    self.add_piece(PieceType::WhiteRook, 3, true);
                 }
                 (Turn::BLACK, 62) => {
                     // e8g8
-                    self.remove_piece(PieceType::BlackKing, 60);
-                    self.remove_piece(PieceType::BlackRook, 63);
-                    self.add_piece(PieceType::BlackKing, 62);
-                    self.add_piece(PieceType::BlackRook, 61);
+                    self.remove_piece(PieceType::BlackKing, 60, true);
+                    self.remove_piece(PieceType::BlackRook, 63, true);
+                    self.add_piece(PieceType::BlackKing, 62, true);
+                    self.add_piece(PieceType::BlackRook, 61, true);
                 }
                 (Turn::BLACK, 58) => {
                     // e8c8
-                    self.remove_piece(PieceType::BlackKing, 60);
-                    self.remove_piece(PieceType::BlackRook, 56);
-                    self.add_piece(PieceType::BlackKing, 58);
-                    self.add_piece(PieceType::BlackRook, 59);
+                    self.remove_piece(PieceType::BlackKing, 60, true);
+                    self.remove_piece(PieceType::BlackRook, 56, true);
+                    self.add_piece(PieceType::BlackKing, 58, true);
+                    self.add_piece(PieceType::BlackRook, 59, true);
                 }
                 _ => (),
             };
         } else if mv.is_en_passant() {
             match self.turn {
                 Turn::WHITE => {
-                    self.remove_piece(PieceType::BlackPawn, to - 8);
-                    self.remove_piece(PieceType::WhitePawn, from);
-                    self.add_piece(PieceType::WhitePawn, to);
+                    self.remove_piece(PieceType::BlackPawn, to - 8 , true);
+                    self.remove_piece(PieceType::WhitePawn, from, true);
+                    self.add_piece(PieceType::WhitePawn, to, true);
                 }
                 Turn::BLACK => {
-                    self.remove_piece(PieceType::WhitePawn, to + 8);
-                    self.remove_piece(PieceType::BlackPawn, from);
-                    self.add_piece(PieceType::BlackPawn, to);
+                    self.remove_piece(PieceType::WhitePawn, to + 8, true);
+                    self.remove_piece(PieceType::BlackPawn, from, true);
+                    self.add_piece(PieceType::BlackPawn, to, true);
                 }
             };
         } else {
             // Normal Capture
             if let Some(p) = capture {
-                self.remove_piece(p, to);
+                self.remove_piece(p, to , true);
             }
 
             if piece == PieceType::WhitePawn && to >= 56 {
                 // White Promotion
-                self.remove_piece(PieceType::WhitePawn, from);
-                self.add_piece(PieceType::WhiteQueen, to);
+                self.remove_piece(PieceType::WhitePawn, from , true);
+                self.add_piece(PieceType::WhiteQueen, to, true);
             } else if piece == PieceType::BlackPawn && to <= 7 {
                 // Black Promotion
-                self.remove_piece(PieceType::BlackPawn, from);
-                self.add_piece(PieceType::BlackQueen, to);
+                self.remove_piece(PieceType::BlackPawn, from, true);
+                self.add_piece(PieceType::BlackQueen, to, true);
             } else {
                 // Normal Move
-                self.remove_piece(piece, from);
-                self.add_piece(piece, to);
+                self.remove_piece(piece, from, true);
+                self.add_piece(piece, to, true);
             }
         }
 
@@ -955,65 +955,65 @@ impl Board {
             match (self.opposite_turn(), unmake_move.to) {
                 (Turn::WHITE, 6) => {
                     // e1g1
-                    self.remove_piece(PieceType::WhiteKing, 6);
-                    self.remove_piece(PieceType::WhiteRook, 5);
-                    self.add_piece(PieceType::WhiteKing, 4);
-                    self.add_piece(PieceType::WhiteRook, 7);
+                    self.remove_piece(PieceType::WhiteKing, 6 , false);
+                    self.remove_piece(PieceType::WhiteRook, 5, false);
+                    self.add_piece(PieceType::WhiteKing, 4, false);
+                    self.add_piece(PieceType::WhiteRook, 7, false);
                 }
                 (Turn::WHITE, 2) => {
                     // e1c1
-                    self.remove_piece(PieceType::WhiteKing, 2);
-                    self.remove_piece(PieceType::WhiteRook, 3);
-                    self.add_piece(PieceType::WhiteKing, 4);
-                    self.add_piece(PieceType::WhiteRook, 0);
+                    self.remove_piece(PieceType::WhiteKing, 2, false);
+                    self.remove_piece(PieceType::WhiteRook, 3, false);
+                    self.add_piece(PieceType::WhiteKing, 4, false);
+                    self.add_piece(PieceType::WhiteRook, 0, false);
                 }
                 (Turn::BLACK, 62) => {
                     // e8g8
-                    self.remove_piece(PieceType::BlackKing, 62);
-                    self.remove_piece(PieceType::BlackRook, 61);
-                    self.add_piece(PieceType::BlackKing, 60);
-                    self.add_piece(PieceType::BlackRook, 63);
+                    self.remove_piece(PieceType::BlackKing, 62, false);
+                    self.remove_piece(PieceType::BlackRook, 61, false);
+                    self.add_piece(PieceType::BlackKing, 60, false);
+                    self.add_piece(PieceType::BlackRook, 63, false);
                 }
                 (Turn::BLACK, 58) => {
                     // e8c8
-                    self.remove_piece(PieceType::BlackKing, 58);
-                    self.remove_piece(PieceType::BlackRook, 59);
-                    self.add_piece(PieceType::BlackKing, 60);
-                    self.add_piece(PieceType::BlackRook, 56);
+                    self.remove_piece(PieceType::BlackKing, 58, false);
+                    self.remove_piece(PieceType::BlackRook, 59, false);
+                    self.add_piece(PieceType::BlackKing, 60, false);
+                    self.add_piece(PieceType::BlackRook, 56, false);
                 }
                 _ => (),
             };
         } else if unmake_move.is_en_passant {
             match self.turn {
                 Turn::BLACK => {
-                    self.remove_piece(PieceType::WhitePawn, unmake_move.to);
-                    self.add_piece(PieceType::WhitePawn, unmake_move.from);
-                    self.add_piece(PieceType::BlackPawn, unmake_move.to - 8);
+                    self.remove_piece(PieceType::WhitePawn, unmake_move.to, false);
+                    self.add_piece(PieceType::WhitePawn, unmake_move.from, false);
+                    self.add_piece(PieceType::BlackPawn, unmake_move.to - 8, false);
                 }
                 Turn::WHITE => {
-                    self.remove_piece(PieceType::BlackPawn, unmake_move.to);
-                    self.add_piece(PieceType::BlackPawn, unmake_move.from);
-                    self.add_piece(PieceType::WhitePawn, unmake_move.to + 8);
+                    self.remove_piece(PieceType::BlackPawn, unmake_move.to, false);
+                    self.add_piece(PieceType::BlackPawn, unmake_move.from, false);
+                    self.add_piece(PieceType::WhitePawn, unmake_move.to + 8, false);
                 }
             };
         } else if unmake_move.piece == PieceType::WhitePawn && unmake_move.to >= 56 {
-            self.remove_piece(PieceType::WhiteQueen, unmake_move.to);
-            self.add_piece(PieceType::WhitePawn, unmake_move.from);
+            self.remove_piece(PieceType::WhiteQueen, unmake_move.to, false);
+            self.add_piece(PieceType::WhitePawn, unmake_move.from, false);
             if let Some(captured) = unmake_move.captured {
-                self.add_piece(captured, unmake_move.to);
+                self.add_piece(captured, unmake_move.to, false);
             };
         } else if unmake_move.piece == PieceType::BlackPawn && unmake_move.to <= 7 {
-            self.remove_piece(PieceType::BlackQueen, unmake_move.to);
-            self.add_piece(PieceType::BlackPawn, unmake_move.from);
+            self.remove_piece(PieceType::BlackQueen, unmake_move.to, false);
+            self.add_piece(PieceType::BlackPawn, unmake_move.from, false);
             if let Some(captured) = unmake_move.captured {
-                self.add_piece(captured, unmake_move.to);
+                self.add_piece(captured, unmake_move.to, false);
             };
         } else {
-            self.remove_piece(unmake_move.piece, unmake_move.to);
-            self.add_piece(unmake_move.piece, unmake_move.from);
+            self.remove_piece(unmake_move.piece, unmake_move.to, false);
+            self.add_piece(unmake_move.piece, unmake_move.from, false);
 
             if let Some(piece) = unmake_move.captured {
-                self.add_piece(piece, unmake_move.to);
+                self.add_piece(piece, unmake_move.to, false);
             };
         }
 

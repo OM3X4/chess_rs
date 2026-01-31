@@ -158,42 +158,46 @@ impl Board {
         piece_at
     } //
 
-    pub fn add_piece(&mut self, piece: PieceType, sq: usize) {
+    pub fn add_piece(&mut self, piece: PieceType, sq: usize , is_make: bool) {
         let mask = 1u64 << sq;
 
         self.bitboards.0[piece.piece_index()].0 |= mask;
         self.occupied.0 |= mask;
         self.piece_at[sq] = Some(piece);
-        self.mat_eval += piece.value();
-        self.number_of_pieces += 1;
-        if piece == PieceType::WhitePawn || piece == PieceType::BlackPawn {
-            self.number_of_pawns += 1;
-        }
-        // count mobility
-        self.mobility_eval += piece.mobility_score(sq, self.occupied.0);
-        self.mg_pst_eval += piece.pst(sq, false);
-        self.eg_pst_eval += piece.pst(sq, true);
+        if is_make  {
+            self.mat_eval += piece.value();
+            self.number_of_pieces += 1;
+            if piece == PieceType::WhitePawn || piece == PieceType::BlackPawn {
+                self.number_of_pawns += 1;
+            }
+            // // count mobility
+            // self.mobility_eval += piece.mobility_score(sq, self.occupied.0);
+            self.mg_pst_eval += piece.pst(sq, false);
+            self.eg_pst_eval += piece.pst(sq, true);
 
-        self.hash ^= Z_PIECE[piece.piece_index()][sq];
+            self.hash ^= Z_PIECE[piece.piece_index()][sq];
+        }
     } //
 
-    pub fn remove_piece(&mut self, piece: PieceType, sq: usize) {
+    pub fn remove_piece(&mut self, piece: PieceType, sq: usize , is_make: bool) {
         let mask = 1u64 << sq;
 
         self.bitboards.0[piece.piece_index()].0 &= !mask;
         self.occupied.0 &= !mask;
         self.piece_at[sq] = None;
-        self.mat_eval -= piece.value();
-        self.number_of_pieces -= 1;
-        if piece == PieceType::WhitePawn || piece == PieceType::BlackPawn {
-            self.number_of_pawns -= 1;
-        }
-        // count mobility
-        self.mobility_eval -= piece.mobility_score(sq, self.occupied.0);
-        self.mg_pst_eval -= piece.pst(sq, false);
-        self.eg_pst_eval -= piece.pst(sq, true);
+        if is_make {
+            self.mat_eval -= piece.value();
+            self.number_of_pieces -= 1;
+            if piece == PieceType::WhitePawn || piece == PieceType::BlackPawn {
+                self.number_of_pawns -= 1;
+            }
+            // // count mobility
+            // self.mobility_eval -= piece.mobility_score(sq, self.occupied.0);
+            self.mg_pst_eval -= piece.pst(sq, false);
+            self.eg_pst_eval -= piece.pst(sq, true);
 
-        self.hash ^= Z_PIECE[piece.piece_index()][sq];
+            self.hash ^= Z_PIECE[piece.piece_index()][sq];
+        }
     } //
 
     pub fn load_from_fen(&mut self, fen: &str) {

@@ -575,3 +575,61 @@ pub const EG_KING_TABLE: [i32; 64] = [
     -27, -11,   4,  13,  14,   4,  -5, -17,
     -53, -34, -21, -11, -28, -14, -24, -43
 ];
+
+const fn flip(sq: usize) -> usize {
+    sq ^ 56
+}
+
+
+const fn build_phase(
+    pawn:   &[i32; 64],
+    knight:&[i32; 64],
+    bishop:&[i32; 64],
+    rook:  &[i32; 64],
+    queen: &[i32; 64],
+    king:  &[i32; 64],
+) -> [[i32; 64]; 12] {
+    let mut out = [[0; 64]; 12];
+    let mut sq = 0;
+
+    while sq < 64 {
+        // White pieces (0..5), flipped
+        out[0][sq] = pawn  [flip(sq)];
+        out[1][sq] = knight[flip(sq)];
+        out[2][sq] = bishop[flip(sq)];
+        out[3][sq] = rook  [flip(sq)];
+        out[4][sq] = queen [flip(sq)];
+        out[5][sq] = king  [flip(sq)];
+
+        // Black pieces (6..11), normal + negated
+        out[6][sq]  = -pawn  [sq];
+        out[7][sq]  = -knight[sq];
+        out[8][sq]  = -bishop[sq];
+        out[9][sq]  = -rook  [sq];
+        out[10][sq] = -queen [sq];
+        out[11][sq] = -king  [sq];
+
+        sq += 1;
+    }
+
+    out
+}
+
+pub static PST: [[[i32; 64]; 12]; 2] = [
+    build_phase(
+        &MG_PAWN_TABLE,
+        &MG_KNIGHT_TABLE,
+        &MG_BISHOP_TABLE,
+        &MG_ROOK_TABLE,
+        &MG_QUEEN_TABLE,
+        &MG_KING_TABLE,
+    ),
+    build_phase(
+        &EG_PAWN_TABLE,
+        &EG_KNIGHT_TABLE,
+        &EG_BISHOP_TABLE,
+        &EG_ROOK_TABLE,
+        &EG_QUEEN_TABLE,
+        &EG_KING_TABLE,
+    ),
+];

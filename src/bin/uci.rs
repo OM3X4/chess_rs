@@ -1,7 +1,8 @@
 use chess::board::constants::IS_STOP;
 use chess::board::rook_magic::init_rook_magics;
 use chess::board::{Move, Turn};
-use chess::board::{TranspositionTable, bishop_magic::init_bishop_magics};
+use chess::board::bishop_magic::init_bishop_magics;
+use chess::board::tt::TranspositionTable;
 use std::io::{self, Write};
 use std::sync::atomic::Ordering;
 use std::thread;

@@ -132,8 +132,6 @@ pub const KING_ATTACK_TABLE: [u64; 64] = [
     0x40c0000000000000,
 ]; //
 
-// Standard Little-Endian Rank-File Mapping (A1=0, H8=63)
-
 pub const WHITE_PAWN_ATTACKS: [u64; 64] = [
     // Rank 1 (Indices 0-7) - No pawns here
     0x0000000000000200, // A1 → B2
@@ -284,53 +282,6 @@ pub const BLACK_PAWN_ATTACKS: [u64; 64] = [
     0x0040000000000000, // H8 → G7
 ];
 
-const fn get_queen_rays_inclusive(sq: usize) -> u64 {
-    // Start with the bit for the square itself set to 1
-    let mut attacks = 1u64 << sq;
-
-    let r= (sq / 8) as i8;
-    let f= (sq % 8) as i8;
-
-    // Directions: (rank_change, file_change)
-    // N, S, E, W, NE, NW, SE, SW
-    let directions: [(i8 , i8);8] = [
-        (1, 0),
-        (-1, 0),
-        (0, 1),
-        (0, -1),
-        (1, 1),
-        (1, -1),
-        (-1, 1),
-        (-1, -1),
-    ];
-
-    let mut i = 0;
-    while i < 8 {
-        let (dr, df) = directions[i];
-        let mut n_r = r + dr;
-        let mut n_f = f + df;
-
-        while n_r >= 0 && n_r < 8 && n_f >= 0 && n_f < 8 {
-            attacks |= 1 << (n_r * 8 + n_f);
-            n_r += dr;
-            n_f += df;
-        }
-        i += 1;
-    }
-    attacks
-}
-
-// This computes the array at compile time
-pub const SQUARE_RAYS: [u64; 64] = {
-    let mut table = [0; 64];
-    let mut i = 0;
-    while i < 64 {
-        table[i] = get_queen_rays_inclusive(i);
-        i += 1;
-    }
-    table
-};
-
 pub const RANK_3: u64 = 0x0000000000FF0000;
 pub const RANK_4: u64 = 0x00000000FF000000;
 pub const RANK_5: u64 = 0x000000FF00000000;
@@ -339,90 +290,6 @@ pub const RANK_2: u64 = 0x000000000000FF00;
 pub const RANK_7: u64 = 0x00FF000000000000;
 pub const RANK_8: u64 = 0xFF00000000000000;
 pub const RANK_1: u64 = 0x00000000000000FF;
-pub const FILE_A: u64 = 0x0101010101010101;
-pub const FILE_B: u64 = 0x0202020202020202;
-pub const FILE_C: u64 = 0x0404040404040404;
-pub const FILE_D: u64 = 0x0808080808080808;
-pub const FILE_E: u64 = 0x1010101010101010;
-pub const FILE_F: u64 = 0x2020202020202020;
-pub const FILE_G: u64 = 0x4040404040404040;
-pub const FILE_H: u64 = 0x8080808080808080;
-
-pub const FILES: [u64; 8] = [
-    FILE_A, FILE_B, FILE_C, FILE_D, FILE_E, FILE_F, FILE_G, FILE_H,
-];
-
-pub const CENTER_SQUARES: u64 = 0x0000001818000000;
-pub const EXTENDED_CENTER_SQUARES: u64 = 0x00003c3c00000000;
-
-pub const KNIGHTS_BONUS: [i32; 64] = [
--50,-40,-30,-30,-30,-30,-40,-50,
--40,-20,  0,  0,  0,  0,-20,-40,
--30,  0, 10, 15, 15, 10,  0,-30,
--30,  5, 15, 20, 20, 15,  5,-30,
--30,  0, 15, 20, 20, 15,  0,-30,
--30,  5, 10, 15, 15, 10,  5,-30,
--40,-20,  0,  5,  5,  0,-20,-40,
--50,-40,-30,-30,-30,-30,-40,-50,
-];
-
-
-pub const BISHOPS_BONUS: [i32; 64] = [
--20,-10,-10,-10,-10,-10,-10,-20,
--10,  0,  0,  0,  0,  0,  0,-10,
--10,  0,  5, 10, 10,  5,  0,-10,
--10,  5,  5, 10, 10,  5,  5,-10,
--10,  0, 10, 10, 10, 10,  0,-10,
--10, 10, 10, 10, 10, 10, 10,-10,
--10,  5,  0,  0,  0,  0,  5,-10,
--20,-10,-10,-10,-10,-10,-10,-20,
-];
-
-pub const ROOK_BONUS: [i32; 64] = [
-  0,  0,  0,  0,  0,  0,  0,  0,
-  5, 10, 10, 10, 10, 10, 10,  5,
- -5,  0,  0,  0,  0,  0,  0, -5,
- -5,  0,  0,  0,  0,  0,  0, -5,
- -5,  0,  0,  0,  0,  0,  0, -5,
- -5,  0,  0,  0,  0,  0,  0, -5,
- -5,  0,  0,  0,  0,  0,  0, -5,
-  0,  0,  0,  5,  5,  0,  0,  0
-];
-
-pub const PAWNS_BONUS: [i32; 64] = [
-    0,   0,   0,   0,   0,   0,   0,   0,
-    50,  50,  50,  50,  50,  50,  50,  50,
-    10,  10,  20,  30,  30,  20,  10,  10,
-    5,   5,  10,  25,  25,  10,   5,   5,
-    0,   0,   0,  20,  20,   0,   0,   0,
-    5,  -5, -10,   0,   0, -10,  -5,   5,
-    5,  10,  10, -20, -20,  10,  10,   5,
-    0,   0,   0,   0,   0,   0,   0,   0,
-];
-
-
-pub const QUEENS_BONUS: [i32; 64] = [
--20,-10,-10, -5, -5,-10,-10,-20,
--10,  0,  0,  0,  0,  0,  0,-10,
--10,  0,  5,  5,  5,  5,  0,-10,
- -5,  0,  5,  5,  5,  5,  0, -5,
-  0,  0,  5,  5,  5,  5,  0, -5,
--10,  5,  5,  5,  5,  5,  0,-10,
--10,  0,  5,  0,  0,  0,  0,-10,
--20,-10,-10, -5, -5,-10,-10,-20
-];
-
-
-pub const KING_BONUS: [i32; 64] = [
--30,-40,-40,-50,-50,-40,-40,-30,
--30,-40,-40,-50,-50,-40,-40,-30,
--30,-40,-40,-50,-50,-40,-40,-30,
--30,-40,-40,-50,-50,-40,-40,-30,
--20,-30,-30,-40,-40,-30,-30,-20,
--10,-20,-20,-20,-20,-20,-20,-10,
- 20, 20,  0,  0,  0,  0, 20, 20,
- 20, 30, 10,  0,  0, 10, 30, 20
-];
 
 
 pub const MVV_LVA: [[i32; 6]; 6] = [

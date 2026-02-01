@@ -1,189 +1,18 @@
 use crate::board::constants::IS_STOP;
-use rand::prelude::IndexedRandom;
-use smallvec::{SmallVec, smallvec};
+use smallvec::SmallVec;
 use std::sync::atomic::{AtomicU64, Ordering};
-use std::sync::{Arc, Mutex};
-use std::thread::{self, current}; // Import the trait for random selection
 use std::time::Duration;
-
-use crate::board::constants::{RANK_1, RANK_8};
-
 use super::constants::MVV_LVA;
-use super::zobrist::{Z_CASTLING, Z_PIECE, Z_SIDE};
-use super::{Board, Bound, Move, PieceType, TTEntry, TranspositionTable, Turn};
+use crate::board::{Board, Move, Turn};
+use crate::board::tt::{TranspositionTable, Bound};
 
 static NODE_COUNT: AtomicU64 = AtomicU64::new(0);
-static SKIP_COUNT: AtomicU64 = AtomicU64::new(0);
-
-static MAXIMUM_NODE_COUNT: AtomicU64 = AtomicU64::new(0);
-
-impl TranspositionTable {
-    pub fn new(size_pow2: usize) -> Self {
-        let size = 1usize << size_pow2;
-        Self {
-            table: vec![None; size],
-            mask: size - 1,
-        }
-    } //
-
-    #[inline(always)]
-    fn index(&self, key: u64) -> usize {
-        (key as usize) & self.mask
-    } //
-
-    #[inline(always)]
-    pub fn probe(&self, key: u64) -> Option<TTEntry> {
-        let entry = self.table[self.index(key)]?;
-
-        if entry.key != key {
-            return None;
-        }
-
-        return Some(entry);
-    } //
-
-    #[inline(always)]
-    pub fn store(
-        &mut self,
-        key: u64,
-        depth: i8,
-        score: i32,
-        alpha: i32,
-        beta: i32,
-        best_move: Move,
-        all_searched: bool,
-    ) {
-        let bound = if !all_searched {
-            if score <= alpha {
-                Bound::Upper
-            } else {
-                Bound::Lower
-            }
-        } else {
-            if score <= alpha {
-                Bound::Upper
-            } else if score >= beta {
-                Bound::Lower
-            } else {
-                Bound::Exact
-            }
-        };
-        // let bound = if score <= alpha {
-        //     Bound::Upper
-        // } else if score >= beta {
-        //     Bound::Lower
-        // } else {
-        //     Bound::Exact
-        // };
-
-        let idx = self.index(key);
-
-        match self.table[idx] {
-            None => {
-                self.table[idx] = Some(TTEntry {
-                    key,
-                    depth,
-                    score,
-                    bound,
-                    best_move,
-                });
-            }
-            Some(old) if depth >= old.depth => {
-                self.table[idx] = Some(TTEntry {
-                    key,
-                    depth,
-                    score,
-                    bound,
-                    best_move,
-                });
-            }
-            _ => {}
-        }
-    } //
-} //
-
-fn partition_by_bool<T>(v: &mut [T], pred: impl Fn(&T) -> bool) {
-    let mut left = 0;
-    let mut right = v.len();
-
-    while left < right {
-        if pred(&v[left]) {
-            left += 1;
-        } else {
-            right -= 1;
-            v.swap(left, right);
-        }
-    }
-}
-
-#[inline(always)]
-fn partition_captures<T>(v: &mut [T], mut pred: impl FnMut(&T) -> bool) -> usize {
-    let mut left = 0;
-    let mut right = v.len();
-
-    while left < right {
-        if pred(&v[left]) {
-            left += 1;
-        } else {
-            right -= 1;
-            v.swap(left, right);
-        }
-    }
-
-    left // number of elements matching pred
-}
 
 impl Board {
-    pub fn compute_hash(&self) -> u64 {
-        let mut h = 0u64;
-
-        for piece in [
-            PieceType::WhitePawn,
-            PieceType::WhiteKnight,
-            PieceType::WhiteBishop,
-            PieceType::WhiteRook,
-            PieceType::WhiteQueen,
-            PieceType::WhiteKing,
-            PieceType::BlackPawn,
-            PieceType::BlackKnight,
-            PieceType::BlackBishop,
-            PieceType::BlackRook,
-            PieceType::BlackQueen,
-            PieceType::BlackKing,
-        ] {
-            let mut bb = self.bitboards.0[piece.piece_index()].0;
-            let p = piece.piece_index();
-
-            while bb != 0 {
-                let sq = bb.trailing_zeros() as usize;
-                bb &= bb - 1;
-                h ^= Z_PIECE[p][sq];
-            }
-        }
-
-        if self.turn == Turn::BLACK {
-            h ^= *Z_SIDE;
-        }
-
-        if self.castling & 0b0001 != 0 {
-            h ^= Z_CASTLING[0];
-        }
-        if self.castling & 0b0010 != 0 {
-            h ^= Z_CASTLING[1];
-        }
-        if self.castling & 0b0100 != 0 {
-            h ^= Z_CASTLING[2];
-        }
-        if self.castling & 0b1000 != 0 {
-            h ^= Z_CASTLING[3];
-        }
-
-        h
-    } //
 
     #[inline(always)]
     pub fn pieces_score(&self) -> i32 {
-        let bbs = &self.bitboards.0;
+        let bbs = &self.bitboards;
 
         let white = bbs[0].0.count_ones() * 100   // pawn
         + bbs[1].0.count_ones() * 300   // knight
@@ -210,7 +39,7 @@ impl Board {
         let pst_score =
             (self.mg_pst_eval * phase + self.eg_pst_eval * (MAX_PHASE - phase)) / MAX_PHASE;
 
-        let mut score = self.mat_eval + pst_score + self.mobility_eval;
+        let score = self.mat_eval + pst_score + self.mobility_eval;
 
         score
     } //
@@ -220,9 +49,8 @@ impl Board {
         if !mv.is_capture() || mv.is_en_passant() {
             return 0;
         }
-        let mut victim;
 
-        victim = self.piece_at[mv.to()].unwrap_or_else(|| {
+        let victim = self.piece_at[mv.to()].unwrap_or_else(|| {
             println!("{}", mv.to());
             println!("{}", mv.from());
             println!("{}", self.to_fen());
@@ -230,20 +58,7 @@ impl Board {
         });
         let attacker = mv.piece();
 
-        MVV_LVA[(victim.piece_index() % 6)][(attacker.piece_index() % 6)]
-    } //
-
-    pub fn sort_by_mvv_lva(&mut self, moves: &mut SmallVec<[Move; 256]>) {
-        let split = partition_captures(moves, |mv| mv.is_capture());
-
-        // Sort captures only
-        moves[..split].sort_unstable_by(|a, b| {
-            let va = self.mvv_lva(*a);
-            let vb = self.mvv_lva(*b);
-            vb.cmp(&va)
-        });
-
-        // Quiet moves stay untouched
+        MVV_LVA[victim.piece_index() % 6][attacker.piece_index() % 6]
     } //
 
     pub fn score_move(
@@ -264,7 +79,7 @@ impl Board {
         } else {
             0
         }
-    }
+    } //
 
     pub fn sort_moves_by_score(
         &mut self,
@@ -278,7 +93,7 @@ impl Board {
             let vb = self.score_move(*b, ply, killer, tt_move);
             vb.cmp(&va)
         });
-    }
+    } //
 
     pub fn quiescence(&mut self, alpha: i32, beta: i32) -> i32 {
         NODE_COUNT.fetch_add(1, Ordering::Relaxed);
@@ -301,7 +116,7 @@ impl Board {
         let mut moves = SmallVec::new();
         self.generate_pesudo_moves(&mut moves);
 
-        let mut iter = moves.iter().filter(|mv| mv.is_capture());
+        let iter = moves.iter().filter(|mv| mv.is_capture());
 
         for mv in iter {
             let undo = self.make_move(*mv);
@@ -330,7 +145,7 @@ impl Board {
         ply: usize,
         remaining_depth: i8,
         mut alpha: i32,
-        mut beta: i32,
+        beta: i32,
         tt: &mut TranspositionTable,
         is_alpha_beta: bool,
         is_tt: bool,
@@ -368,16 +183,7 @@ impl Board {
                             return score;
                         }
                         _ => (),
-                        // Bound::Lower => {
-                        //     alpha = alpha.max(entry.score);
-                        // }
-                        // Bound::Upper => {
-                        //     beta = beta.min(entry.score);
-                        // }
                     }
-                    // if alpha >= beta {
-                    //     return alpha;
-                    // }
                 }
             }
         };
@@ -399,7 +205,7 @@ impl Board {
             self.switch_turn();
             let score = -self.alpha_beta(
                 ply + 1,
-                remaining_depth - 2 - 1,
+                remaining_depth - r - 1,
                 -beta,
                 -(beta - 1),
                 tt,
@@ -486,7 +292,7 @@ impl Board {
             };
             found_legal = true;
 
-            let mut score: i32 = 0;
+            let score: i32;
 
             let can_lmr = !mv.is_capture() && index >= 4 && remaining_depth_next >= 3 && is_lmr;
 
@@ -612,9 +418,7 @@ impl Board {
         maximum_time: Duration,
         tt_global: Option<&mut TranspositionTable>,
     ) -> Move {
-        let mut moves = self.generate_moves();
-        partition_by_bool(&mut moves, |mv| mv.is_capture());
-
+        let moves = self.generate_moves();
         let start_time = std::time::Instant::now();
 
         let mut searched_depth = 0;
@@ -797,54 +601,5 @@ impl Board {
         }
 
         nodes
-    } //
-}
-
-mod test {
-    use std::collections::HashMap;
-
-    use crate::board::{Move, PieceType, board};
-
-    #[test]
-    fn test() {
-        use crate::board::bishop_magic::init_bishop_magics;
-        use crate::board::rook_magic::init_rook_magics;
-
-        init_rook_magics();
-        init_bishop_magics();
-
-        let mut board = board::Board::new();
-        board.load_from_fen("4r3/1pkb4/2p5/P2p1p2/P4Pn1/R1P5/3QP3/1N2K1r1 w - - 0 34");
-        let start = std::time::Instant::now();
-
-        dbg!(
-            board
-                .generate_moves()
-                .iter()
-                .map(|mv| mv.to_uci())
-                .collect::<Vec<String>>()
-        );
-        dbg!(board.is_king_in_check(crate::board::Turn::WHITE));
-
-        dbg!(start.elapsed());
-
-        // dbg!(
-        //     board
-        //         .generate_moves()
-        //         .iter()
-        //         .map(|mv| mv.to_uci())
-        //         .collect::<Vec<String>>()
-        // );
-        // let moves = board
-        //     .generate_moves()
-        //     .iter()
-        //     .map(|mv| mv.to_uci())
-        //     .collect::<Vec<String>>();
-        // dbg!(moves);
-        // dbg!(
-        //     board
-        //         .engine(64, true, false, true, true, false, std::time::Duration::from_millis(5000))
-        //         .to_uci()
-        // );
     } //
 }

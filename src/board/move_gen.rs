@@ -1,25 +1,13 @@
 use crate::board::UnMakeMove;
 use crate::board::bishop_magic::bishop_attacks;
-use crate::board::constants::{RANK_3, RANK_4, RANK_5, RANK_6};
 use crate::board::rook_magic::rook_attacks;
 use smallvec::SmallVec;
-use crate::board::zobrist::{Z_CASTLING , Z_SIDE};
-use super::constants::{
-    BLACK_PAWN_ATTACKS, KING_ATTACK_TABLE, KNIGHTS_ATTACK_TABLE, WHITE_PAWN_ATTACKS,
+use crate::board::zobrist::{Z_CASTLING};
+use crate::board::constants::{
+    BLACK_PAWN_ATTACKS, KING_ATTACK_TABLE, KNIGHTS_ATTACK_TABLE, WHITE_PAWN_ATTACKS, RANK_2, RANK_7, RANK_3, RANK_4, RANK_5, RANK_6
 };
-use super::constants::{RANK_2, RANK_7};
-use super::{Board, Move, PieceType, Turn};
-
-pub fn extract_bits(bitboard: u64) -> Vec<u64> {
-    let mut res: Vec<u64> = Vec::new();
-    let mut bb = bitboard;
-    while bb != 0 {
-        let lsb = bb.trailing_zeros();
-        res.push(lsb as u64);
-        bb &= bb - 1;
-    }
-    res
-}
+use crate::board::{Board, Move, Turn};
+use crate::board::pieces::PieceType;
 
 impl Board {
     #[inline(always)]
@@ -30,11 +18,11 @@ impl Board {
 
         let (mut knights, piece_type) = match self.turn {
             Turn::WHITE => (
-                self.bitboards.0[PieceType::WhiteKnight.piece_index()].0,
+                self.bitboards[PieceType::WhiteKnight.piece_index()].0,
                 PieceType::WhiteKnight,
             ),
             Turn::BLACK => (
-                self.bitboards.0[PieceType::BlackKnight.piece_index()].0,
+                self.bitboards[PieceType::BlackKnight.piece_index()].0,
                 PieceType::BlackKnight,
             ),
         };
@@ -64,11 +52,11 @@ impl Board {
 
         let (king, piece_type) = match self.turn {
             Turn::WHITE => (
-                self.bitboards.0[PieceType::WhiteKing.piece_index()].0,
+                self.bitboards[PieceType::WhiteKing.piece_index()].0,
                 PieceType::WhiteKing,
             ),
             Turn::BLACK => (
-                self.bitboards.0[PieceType::BlackKing.piece_index()].0,
+                self.bitboards[PieceType::BlackKing.piece_index()].0,
                 PieceType::BlackKing,
             ),
         };
@@ -119,11 +107,11 @@ impl Board {
     #[inline(always)]
     pub fn generate_white_pawns_moves(&self, moves: &mut SmallVec<[Move; 256]>) {
         let blockers = self.occupied.0;
-        // let pawn_squares = &self.bitboards.0[PieceType::WhitePawn.piece_index()];
+        // let pawn_squares = &self.bitboards[PieceType::WhitePawn.piece_index()];
 
         let enemy_pieces_bb = self.get_all_black_bits();
 
-        let mut pawns = self.bitboards.0[PieceType::WhitePawn.piece_index()].0;
+        let mut pawns = self.bitboards[PieceType::WhitePawn.piece_index()].0;
 
         while pawns != 0 {
             let from = pawns.trailing_zeros() as usize;
@@ -196,7 +184,7 @@ impl Board {
         let blockers = self.occupied.0;
         let enemy_pieces_bb = self.get_all_white_bits();
 
-        let mut pawns = self.bitboards.0[PieceType::BlackPawn.piece_index()].0;
+        let mut pawns = self.bitboards[PieceType::BlackPawn.piece_index()].0;
 
         while pawns != 0 {
             let from = pawns.trailing_zeros() as usize;
@@ -271,11 +259,11 @@ impl Board {
 
         let (mut rooks, piece_type) = match self.turn {
             Turn::WHITE => (
-                self.bitboards.0[PieceType::WhiteRook.piece_index()].0,
+                self.bitboards[PieceType::WhiteRook.piece_index()].0,
                 PieceType::WhiteRook,
             ),
             Turn::BLACK => (
-                self.bitboards.0[PieceType::BlackRook.piece_index()].0,
+                self.bitboards[PieceType::BlackRook.piece_index()].0,
                 PieceType::BlackRook,
             ),
         };
@@ -299,11 +287,11 @@ impl Board {
 
         let (mut queens, piece_type) = match self.turn {
             Turn::WHITE => (
-                self.bitboards.0[PieceType::WhiteQueen.piece_index()].0,
+                self.bitboards[PieceType::WhiteQueen.piece_index()].0,
                 PieceType::WhiteQueen,
             ),
             Turn::BLACK => (
-                self.bitboards.0[PieceType::BlackQueen.piece_index()].0,
+                self.bitboards[PieceType::BlackQueen.piece_index()].0,
                 PieceType::BlackQueen,
             ),
         };
@@ -334,11 +322,11 @@ impl Board {
 
         let (mut bishops, piece_type) = match self.turn {
             Turn::WHITE => (
-                self.bitboards.0[PieceType::WhiteBishop.piece_index()].0,
+                self.bitboards[PieceType::WhiteBishop.piece_index()].0,
                 PieceType::WhiteBishop,
             ),
             Turn::BLACK => (
-                self.bitboards.0[PieceType::BlackBishop.piece_index()].0,
+                self.bitboards[PieceType::BlackBishop.piece_index()].0,
                 PieceType::BlackBishop,
             ),
         };
@@ -362,11 +350,11 @@ impl Board {
 
         let (mut queens, piece_type) = match self.turn {
             Turn::WHITE => (
-                self.bitboards.0[PieceType::WhiteQueen.piece_index()].0,
+                self.bitboards[PieceType::WhiteQueen.piece_index()].0,
                 PieceType::WhiteQueen,
             ),
             Turn::BLACK => (
-                self.bitboards.0[PieceType::BlackQueen.piece_index()].0,
+                self.bitboards[PieceType::BlackQueen.piece_index()].0,
                 PieceType::BlackQueen,
             ),
         };
@@ -419,7 +407,6 @@ impl Board {
         self.generate_bishop_moves_magics(&mut moves);
         self.generate_rook_moves_magics(&mut moves);
         self.generate_king_moves(&mut moves);
-        // self.generate_queen_moves(&mut moves);
 
         match self.turn {
             Turn::WHITE => self.generate_white_pawns_moves(&mut moves),
@@ -433,41 +420,7 @@ impl Board {
 
         self.generate_pesudo_moves(&mut pesudo_moves);
 
-        let king_bb = match self.turn {
-            Turn::WHITE => self.bitboards.0[PieceType::WhiteKing.piece_index()].0,
-            Turn::BLACK => self.bitboards.0[PieceType::BlackKing.piece_index()].0,
-        };
-
-        let king_type = match self.turn {
-            Turn::WHITE => PieceType::WhiteKing,
-            Turn::BLACK => PieceType::BlackKing,
-        };
-
-        let is_king_in_check_now = self.is_king_in_check(self.turn);
-
-        let king_square = king_bb.trailing_zeros() as usize;
-
-        if king_square > 63 {
-            return legal_moves;
-        }
-
         for mv in pesudo_moves {
-            // if !is_king_in_check_now {
-            //     if ((1u64 << mv.from()) & SQUARE_RAYS[king_square]) == 0 && mv.piece() != king_type
-            //     {
-            //         legal_moves.push(mv);
-            //         continue;
-            //     }
-            // } else {
-            //     if (1u64 << mv.to())
-            //         & (SQUARE_RAYS[king_square] | KNIGHTS_ATTACK_TABLE[king_square])
-            //         == 0
-            //         && mv.piece() != king_type
-            //     {
-            //         continue;
-            //     }
-            // }
-
             let opposite_turn = self.opposite_turn();
 
             if mv.is_castling() {
@@ -529,12 +482,12 @@ impl Board {
     pub fn is_king_in_check(&self, turn: Turn) -> bool {
         let (king, enemy_king) = match turn {
             Turn::BLACK => (
-                &self.bitboards.0[PieceType::BlackKing.piece_index()].0,
-                &self.bitboards.0[PieceType::WhiteKing.piece_index()].0,
+                &self.bitboards[PieceType::BlackKing.piece_index()].0,
+                &self.bitboards[PieceType::WhiteKing.piece_index()].0,
             ),
             Turn::WHITE => (
-                &self.bitboards.0[PieceType::WhiteKing.piece_index()].0,
-                &self.bitboards.0[PieceType::BlackKing.piece_index()].0,
+                &self.bitboards[PieceType::WhiteKing.piece_index()].0,
+                &self.bitboards[PieceType::BlackKing.piece_index()].0,
             ),
         };
 
@@ -545,24 +498,24 @@ impl Board {
         let king_square = king.trailing_zeros() as u64;
 
         let enemy_rooks = match turn {
-            Turn::BLACK => &self.bitboards.0[PieceType::WhiteRook.piece_index()].0,
-            Turn::WHITE => &self.bitboards.0[PieceType::BlackRook.piece_index()].0,
+            Turn::BLACK => &self.bitboards[PieceType::WhiteRook.piece_index()].0,
+            Turn::WHITE => &self.bitboards[PieceType::BlackRook.piece_index()].0,
         };
         let enemy_queens = match turn {
-            Turn::BLACK => &self.bitboards.0[PieceType::WhiteQueen.piece_index()].0,
-            Turn::WHITE => &self.bitboards.0[PieceType::BlackQueen.piece_index()].0,
+            Turn::BLACK => &self.bitboards[PieceType::WhiteQueen.piece_index()].0,
+            Turn::WHITE => &self.bitboards[PieceType::BlackQueen.piece_index()].0,
         };
         let enemy_bishops = match turn {
-            Turn::BLACK => &self.bitboards.0[PieceType::WhiteBishop.piece_index()].0,
-            Turn::WHITE => &self.bitboards.0[PieceType::BlackBishop.piece_index()].0,
+            Turn::BLACK => &self.bitboards[PieceType::WhiteBishop.piece_index()].0,
+            Turn::WHITE => &self.bitboards[PieceType::BlackBishop.piece_index()].0,
         };
         let enemy_knights = match turn {
-            Turn::BLACK => &self.bitboards.0[PieceType::WhiteKnight.piece_index()].0,
-            Turn::WHITE => &self.bitboards.0[PieceType::BlackKnight.piece_index()].0,
+            Turn::BLACK => &self.bitboards[PieceType::WhiteKnight.piece_index()].0,
+            Turn::WHITE => &self.bitboards[PieceType::BlackKnight.piece_index()].0,
         };
         let enemy_pawns = match turn {
-            Turn::BLACK => &self.bitboards.0[PieceType::WhitePawn.piece_index()].0,
-            Turn::WHITE => &self.bitboards.0[PieceType::BlackPawn.piece_index()].0,
+            Turn::BLACK => &self.bitboards[PieceType::WhitePawn.piece_index()].0,
+            Turn::WHITE => &self.bitboards[PieceType::BlackPawn.piece_index()].0,
         };
         let is_attacked_by_knights =
             (KNIGHTS_ATTACK_TABLE[king_square as usize] & enemy_knights) != 0;
@@ -616,31 +569,31 @@ impl Board {
 
     pub fn is_square_attacked(&self, square: u8, turn: Turn) -> bool {
         let enemy_king = match turn {
-            Turn::WHITE => &self.bitboards.0[PieceType::WhiteKing.piece_index()].0,
-            Turn::BLACK => &self.bitboards.0[PieceType::BlackKing.piece_index()].0,
+            Turn::WHITE => &self.bitboards[PieceType::WhiteKing.piece_index()].0,
+            Turn::BLACK => &self.bitboards[PieceType::BlackKing.piece_index()].0,
         };
 
         let square_bb = 1u64 << square as u64;
 
         let enemy_rooks = match turn {
-            Turn::WHITE => &self.bitboards.0[PieceType::WhiteRook.piece_index()].0,
-            Turn::BLACK => &self.bitboards.0[PieceType::BlackRook.piece_index()].0,
+            Turn::WHITE => &self.bitboards[PieceType::WhiteRook.piece_index()].0,
+            Turn::BLACK => &self.bitboards[PieceType::BlackRook.piece_index()].0,
         };
         let enemy_queens = match turn {
-            Turn::WHITE => &self.bitboards.0[PieceType::WhiteQueen.piece_index()].0,
-            Turn::BLACK => &self.bitboards.0[PieceType::BlackQueen.piece_index()].0,
+            Turn::WHITE => &self.bitboards[PieceType::WhiteQueen.piece_index()].0,
+            Turn::BLACK => &self.bitboards[PieceType::BlackQueen.piece_index()].0,
         };
         let enemy_bishops = match turn {
-            Turn::WHITE => &self.bitboards.0[PieceType::WhiteBishop.piece_index()].0,
-            Turn::BLACK => &self.bitboards.0[PieceType::BlackBishop.piece_index()].0,
+            Turn::WHITE => &self.bitboards[PieceType::WhiteBishop.piece_index()].0,
+            Turn::BLACK => &self.bitboards[PieceType::BlackBishop.piece_index()].0,
         };
         let enemy_knights = match turn {
-            Turn::WHITE => &self.bitboards.0[PieceType::WhiteKnight.piece_index()].0,
-            Turn::BLACK => &self.bitboards.0[PieceType::BlackKnight.piece_index()].0,
+            Turn::WHITE => &self.bitboards[PieceType::WhiteKnight.piece_index()].0,
+            Turn::BLACK => &self.bitboards[PieceType::BlackKnight.piece_index()].0,
         };
         let enemy_pawns = match turn {
-            Turn::WHITE => &self.bitboards.0[PieceType::WhitePawn.piece_index()].0,
-            Turn::BLACK => &self.bitboards.0[PieceType::BlackPawn.piece_index()].0,
+            Turn::WHITE => &self.bitboards[PieceType::WhitePawn.piece_index()].0,
+            Turn::BLACK => &self.bitboards[PieceType::BlackPawn.piece_index()].0,
         };
 
         let is_attacked_by_knights = (KNIGHTS_ATTACK_TABLE[square as usize] & enemy_knights) != 0;
@@ -690,67 +643,6 @@ impl Board {
         }
 
         return false;
-    } //
-
-    pub fn get_least_valuable_attacker_to_sq_by_color(&self, square: u8, turn: Turn) -> i32 {
-        let sq_bb = 1u64 << square as u64;
-
-        // Color index modifier for the bitboards
-        let color_index_modifier = match self.turn {
-            Turn::WHITE => 0,
-            Turn::BLACK => 6,
-        };
-
-        // Checking for attacking pawns
-        let enemy_pawns = self.bitboards.0[((PieceType::WhitePawn as u8) + color_index_modifier) as usize].0;
-
-        let pawns_attacks = match turn {
-            Turn::WHITE => WHITE_PAWN_ATTACKS[square as usize],
-            Turn::BLACK => BLACK_PAWN_ATTACKS[square as usize],
-        };
-        let attacking_pawns = pawns_attacks & enemy_pawns;
-
-        if attacking_pawns != 0 {
-            return 100 + attacking_pawns.trailing_zeros() as i32;
-        }
-
-        // Checking for attacking knights
-        let enemy_knights = self.bitboards.0[((PieceType::WhiteKnight as u8) + color_index_modifier) as usize].0;
-        let knights_attacks = KNIGHTS_ATTACK_TABLE[square as usize];
-        let attacking_knights = knights_attacks & enemy_knights;
-
-        if attacking_knights != 0 {
-            return 300 + attacking_knights.trailing_zeros() as i32;
-        }
-
-        // Checking for attacking bishops
-        let enemy_bishops = self.bitboards.0[((PieceType::WhiteBishop as u8) + color_index_modifier) as usize].0;
-        let bishops_attacks_bb = bishop_attacks(square as usize, self.occupied.0);
-        let attacking_bishops = bishops_attacks_bb & enemy_bishops;
-
-        if attacking_bishops != 0 {
-            return 300 + attacking_bishops.trailing_zeros() as i32;
-        }
-
-        // Checking for attacking rooks
-        let enemy_rooks = self.bitboards.0[((PieceType::WhiteRook as u8) + color_index_modifier) as usize].0;
-        let rooks_attacks_bb = rook_attacks(square as usize, self.occupied.0);
-        let attacking_rooks = rooks_attacks_bb & enemy_rooks;
-
-        if attacking_rooks != 0 {
-            return 500 + attacking_rooks.trailing_zeros() as i32;
-        }
-
-        // Checking for attacking queens
-        let enemy_queens = self.bitboards.0[((PieceType::WhiteQueen as u8) + color_index_modifier) as usize].0;
-        let queens_attacks = rook_attacks(square as usize, self.occupied.0) | bishop_attacks(square as usize, self.occupied.0);
-        let attacking_queens = queens_attacks & enemy_queens;
-
-        if attacking_queens != 0 {
-            return 900 + attacking_queens.trailing_zeros() as i32;
-        }
-
-        return 0;
     } //
 
     pub fn make_move(&mut self, mv: Move) -> UnMakeMove {
@@ -1035,35 +927,3 @@ impl Board {
         self.number_of_pawns = unmake_move.number_of_pawns;
     } //
 } //
-
-mod tests {
-    use smallvec::SmallVec;
-
-    use crate::board::{PieceType, move_gen::extract_bits};
-
-    #[test]
-    fn test() {
-        let mut board = super::Board::new();
-        board.load_from_fen("5q1r/4p1kp/1rp1b1pn/8/1PP1Pp2/P6P/R2K1PP1/1N3BNR b - e3");
-        // let mut moves = SmallVec::new();
-        // board.generate_pesudo_moves(&mut moves);
-        let moves = board.generate_moves();
-        println!(
-            "{:?}",
-            moves.iter().map(|mv| mv.to_uci()).collect::<Vec<String>>()
-        );
-    }
-
-    #[test]
-    fn test2() {
-        let mut board = super::Board::new();
-        board.load_from_fen("1rb2q1r/4pk1p/1pp3pn/4P3/1PP2p2/P4P1P/R2KP1P1/1N3qNR w");
-        dbg!(
-            board
-                .generate_moves()
-                .iter()
-                .map(|mv| mv.to_uci())
-                .collect::<Vec<String>>()
-        );
-    }
-}

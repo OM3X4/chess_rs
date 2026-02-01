@@ -1,7 +1,7 @@
 use std::{fs::File, io::{BufRead, BufReader}};
 
 fn main() {
-    let file = File::open("opening.txt").unwrap();
+    let file = File::open("opening_6_10_2_moves.txt").unwrap();
     let reader = BufReader::new(file);
 
     println!("pub struct BookEntry {{ pub hash: u64, pub moves: &'static [u16], }}");

@@ -118,7 +118,7 @@ def perft(board: chess.Board, depth: int , max_depth: int , engine) -> int:
     # moves = stockfish_top(board, engine, time_sec=0.2 , number_of_moves=moves_num)
 
     moves = [chess.Move(m[0], m[1]) for m in moves]
-    print(f"{board.fen()} || {[m.uci() for m in moves]}")
+    print(f"{board.fen()} || {[m.uci() for m in moves[0:2]]}")
     nodes = 0
 
     for move in moves:

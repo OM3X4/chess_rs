@@ -118,7 +118,7 @@ impl Board {
 
             // single and double jump
             if (blockers & (1u64 << (from + 8))) == 0 {
-                if (pawn_bb & RANK_7) != 0 {
+                if from + 8 >= 56 {
                     for piece in [
                         PieceType::WhiteQueen,
                         PieceType::WhiteRook,
@@ -229,7 +229,7 @@ impl Board {
 
             // single and double jump
             if (blockers & (1u64 << (from - 8))) == 0 {
-                if (pawn_bb & RANK_2) != 0 {
+                if (from - 8) < 8 {
                     for piece in [
                         PieceType::WhiteQueen,
                         PieceType::WhiteRook,

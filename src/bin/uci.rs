@@ -63,6 +63,10 @@ fn main() {
             if tokens[idx] == "startpos" {
                 idx += 1;
             } else if tokens[idx] == "fen" {
+                if tokens.len() < idx + 6 {
+                    println!("Invalid FEN , Expected 6 fields , found {}", tokens.len() - idx);
+                    continue;
+                }
                 let fen = tokens[idx + 1..idx + 7].join(" ");
                 board.load_from_fen(&fen);
                 idx += 7;
@@ -115,25 +119,37 @@ fn main() {
                 .and_then(|i| args.get(i + 1));
 
             if let Some(w_time_str) = w_time_parsed {
-                let white_time = w_time_str.parse::<u64>().unwrap();
+                let white_time = w_time_str.parse::<u64>().unwrap_or_else(|_| {
+                    println!("Invalid time");
+                    time.as_millis() as u64 * 100
+                });
                 if board.turn == Turn::WHITE {
                     time = std::time::Duration::from_millis(white_time / 100);
                 }
             }
 
             if let Some(b_time_str) = b_time_parsed {
-                let black_time = b_time_str.parse::<u64>().unwrap();
+                let black_time = b_time_str.parse::<u64>().unwrap_or_else(|_| {
+                    println!("Invalid time");
+                    time.as_millis() as u64 * 100
+                });
                 if board.turn == Turn::BLACK {
                     time = std::time::Duration::from_millis(black_time / 100);
                 }
             }
 
             if let Some(depth_str) = depth_parsed {
-                depth = depth_str.parse::<i32>().unwrap();
+                depth = depth_str.parse::<i32>().unwrap_or_else(|_| {
+                    println!("Invalid depth");
+                    depth
+                });
             }
 
             if let Some(time_str) = time_parsed {
-                time = std::time::Duration::from_millis(time_str.parse::<u64>().unwrap());
+                time = std::time::Duration::from_millis(time_str.parse::<u64>().unwrap_or_else(|_| {
+                    println!("Invalid time");
+                    time.as_millis() as u64
+                }));
             }
 
             IS_STOP.store(false, Ordering::Relaxed);

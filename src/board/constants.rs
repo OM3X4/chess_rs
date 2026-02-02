@@ -503,3 +503,6 @@ pub static PST: [[[i32; 64]; 12]; 2] = [
 
 
 pub static IS_STOP: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
+
+pub const PROMO_SHIFT: u32 = 20;
+pub const PROMO_MASK: u32 = 0b1111 << PROMO_SHIFT;

@@ -1,7 +1,9 @@
-use crate::board::constants::{
-    EG_BISHOP_TABLE, EG_KING_TABLE, EG_KNIGHT_TABLE, EG_PAWN_TABLE, EG_QUEEN_TABLE, EG_ROOK_TABLE, KNIGHTS_ATTACK_TABLE, MG_BISHOP_TABLE, MG_KING_TABLE, MG_KNIGHT_TABLE, MG_PAWN_TABLE, MG_QUEEN_TABLE, MG_ROOK_TABLE, PST
-};
 use crate::board::bishop_magic::bishop_attacks;
+use crate::board::constants::{
+    EG_BISHOP_TABLE, EG_KING_TABLE, EG_KNIGHT_TABLE, EG_PAWN_TABLE, EG_QUEEN_TABLE, EG_ROOK_TABLE,
+    KNIGHTS_ATTACK_TABLE, MG_BISHOP_TABLE, MG_KING_TABLE, MG_KNIGHT_TABLE, MG_PAWN_TABLE,
+    MG_QUEEN_TABLE, MG_ROOK_TABLE, PST,
+};
 use crate::board::rook_magic::rook_attacks;
 
 const PIECE_VALUE: [i32; 12] = [
@@ -83,34 +85,29 @@ impl PieceType {
         return PST[is_eg as usize][self.piece_index()][square];
     }
 
-    pub fn mobility_score(self, sq: usize , occupied: u64) -> i32 {
+    pub fn mobility_score(self, sq: usize, occupied: u64) -> i32 {
         return match self {
-            PieceType::WhiteBishop => {
-                2 * bishop_attacks(sq, occupied).count_ones() as i32
-            },
-            PieceType::BlackBishop => {
-                -2 * bishop_attacks(sq, occupied).count_ones() as i32
-            },
-            PieceType::WhiteRook => {
-                2 * rook_attacks(sq, occupied).count_ones() as i32
-            },
-            PieceType::BlackRook => {
-                -2 * rook_attacks(sq, occupied).count_ones() as i32
-            },
-            PieceType::BlackKnight => {
-                -2 * KNIGHTS_ATTACK_TABLE[sq].count_ones() as i32
-            },
-            PieceType::WhiteKnight => {
-                2 * KNIGHTS_ATTACK_TABLE[sq].count_ones() as i32
-            },
+            PieceType::WhiteBishop => 2 * bishop_attacks(sq, occupied).count_ones() as i32,
+            PieceType::BlackBishop => -2 * bishop_attacks(sq, occupied).count_ones() as i32,
+            PieceType::WhiteRook => 2 * rook_attacks(sq, occupied).count_ones() as i32,
+            PieceType::BlackRook => -2 * rook_attacks(sq, occupied).count_ones() as i32,
+            PieceType::BlackKnight => -2 * KNIGHTS_ATTACK_TABLE[sq].count_ones() as i32,
+            PieceType::WhiteKnight => 2 * KNIGHTS_ATTACK_TABLE[sq].count_ones() as i32,
             PieceType::WhiteQueen => {
-                2 * rook_attacks(sq, occupied).count_ones() as i32 + 2 * bishop_attacks(sq, occupied).count_ones() as i32
-            },
+                2 * rook_attacks(sq, occupied).count_ones() as i32
+                    + 2 * bishop_attacks(sq, occupied).count_ones() as i32
+            }
             PieceType::BlackQueen => {
-                -2 * rook_attacks(sq, occupied).count_ones() as i32 -
-                2 * bishop_attacks(sq, occupied).count_ones() as i32
-            },
-            _ => 0
+                -2 * rook_attacks(sq, occupied).count_ones() as i32
+                    - 2 * bishop_attacks(sq, occupied).count_ones() as i32
+            }
+            _ => 0,
         };
+    }
+
+    #[inline]
+    pub fn flip_color(self) -> PieceType {
+        let v = self as u8;
+        unsafe { std::mem::transmute((v + 6) % 12) }
     }
 }

@@ -1,13 +1,14 @@
 use crate::board::UnMakeMove;
 use crate::board::bishop_magic::bishop_attacks;
-use crate::board::rook_magic::rook_attacks;
-use smallvec::SmallVec;
-use crate::board::zobrist::{Z_CASTLING};
 use crate::board::constants::{
-    BLACK_PAWN_ATTACKS, KING_ATTACK_TABLE, KNIGHTS_ATTACK_TABLE, WHITE_PAWN_ATTACKS, RANK_2, RANK_7, RANK_3, RANK_4, RANK_5, RANK_6
+    BLACK_PAWN_ATTACKS, KING_ATTACK_TABLE, KNIGHTS_ATTACK_TABLE, RANK_2, RANK_3, RANK_4, RANK_5,
+    RANK_6, RANK_7, WHITE_PAWN_ATTACKS,
 };
-use crate::board::{Board, Move, Turn};
 use crate::board::pieces::PieceType;
+use crate::board::rook_magic::rook_attacks;
+use crate::board::zobrist::Z_CASTLING;
+use crate::board::{Board, Move, Turn};
+use smallvec::SmallVec;
 
 impl Board {
     #[inline(always)]
@@ -36,9 +37,7 @@ impl Board {
                 let to = attacks.trailing_zeros() as usize;
                 attacks &= attacks - 1;
                 let capture = (enemy_bits & (1u64 << to)) != 0;
-                moves.push(Move::new(
-                    from, to, piece_type, capture, false, false, false,
-                ));
+                moves.push(Move::new(from, to, piece_type, capture, false, None, false));
             }
         }
     } //
@@ -65,24 +64,24 @@ impl Board {
             Turn::WHITE => {
                 if (self.castling & 0b0001 != 0) && ((((1u64 << 5) | (1u64 << 6)) & occupied) == 0)
                 {
-                    moves.push(Move::new(4, 6, piece_type, false, true, false, false));
+                    moves.push(Move::new(4, 6, piece_type, false, true, None, false));
                 }
                 if self.castling & 0b0010 != 0
                     && ((((1u64 << 1) | (1u64 << 2) | (1u64 << 3)) & occupied) == 0)
                 {
-                    moves.push(Move::new(4, 2, piece_type, false, true, false, false));
+                    moves.push(Move::new(4, 2, piece_type, false, true, None, false));
                 }
             }
             Turn::BLACK => {
                 if (self.castling & 0b0100 != 0)
                     && ((((1u64 << 61) | (1u64 << 62)) & occupied) == 0)
                 {
-                    moves.push(Move::new(60, 62, piece_type, false, true, false, false));
+                    moves.push(Move::new(60, 62, piece_type, false, true, None, false));
                 }
                 if self.castling & 0b1000 != 0
                     && ((((1u64 << 57) | (1u64 << 58) | (1u64 << 59)) & occupied) == 0)
                 {
-                    moves.push(Move::new(60, 58, piece_type, false, true, false, false));
+                    moves.push(Move::new(60, 58, piece_type, false, true, None, false));
                 }
             }
         }
@@ -98,9 +97,7 @@ impl Board {
             let to = attacks.trailing_zeros() as usize;
             attacks &= attacks - 1;
             let capture = (enemy_bits & (1u64 << to)) != 0;
-            moves.push(Move::new(
-                from, to, piece_type, capture, false, false, false,
-            ));
+            moves.push(Move::new(from, to, piece_type, capture, false, None, false));
         }
     } //
 
@@ -120,24 +117,43 @@ impl Board {
             let pawn_bb = 1u64 << from;
 
             // single and double jump
-            if (blockers & 1u64 << from + 8) == 0 {
-                moves.push(Move::new(
-                    from,
-                    from + 8,
-                    PieceType::WhitePawn,
-                    false,
-                    false,
-                    (pawn_bb & RANK_7) != 0,
-                    false,
-                ));
-                if (((1u64 << from) & RANK_2) != 0) && (blockers & 1u64 << (from + 16)) == 0 {
+            if (blockers & (1u64 << (from + 8))) == 0 {
+                if (pawn_bb & RANK_7) != 0 {
+                    for piece in [
+                        PieceType::WhiteQueen,
+                        PieceType::WhiteRook,
+                        PieceType::WhiteBishop,
+                        PieceType::WhiteKnight,
+                    ] {
+                        moves.push(Move::new(
+                            from,
+                            from + 8,
+                            PieceType::WhitePawn,
+                            false,
+                            false,
+                            Some(piece),
+                            false,
+                        ));
+                    }
+                } else {
+                    moves.push(Move::new(
+                        from,
+                        from + 8,
+                        PieceType::WhitePawn,
+                        false,
+                        false,
+                        None,
+                        false,
+                    ));
+                }
+                if (((1u64 << from) & RANK_2) != 0) && (blockers & (1u64 << (from + 16))) == 0 {
                     moves.push(Move::new(
                         from,
                         from + 16,
                         PieceType::WhitePawn,
                         false,
                         false,
-                        false,
+                        None,
                         false,
                     ));
                 }
@@ -157,7 +173,7 @@ impl Board {
                         PieceType::WhitePawn,
                         true,
                         false,
-                        false,
+                        None,
                         true,
                     ));
                 }
@@ -166,15 +182,34 @@ impl Board {
             while attacks != 0 {
                 let to = attacks.trailing_zeros() as usize;
                 attacks &= attacks - 1;
-                moves.push(Move::new(
-                    from,
-                    to,
-                    PieceType::WhitePawn,
-                    true,
-                    false,
-                    to > 55,
-                    false,
-                ));
+                if (pawn_bb & RANK_7) != 0 {
+                    for piece in [
+                        PieceType::WhiteQueen,
+                        PieceType::WhiteRook,
+                        PieceType::WhiteBishop,
+                        PieceType::WhiteKnight,
+                    ] {
+                        moves.push(Move::new(
+                            from,
+                            to,
+                            PieceType::WhitePawn,
+                            true,
+                            false,
+                            Some(piece),
+                            false,
+                        ));
+                    }
+                } else {
+                    moves.push(Move::new(
+                        from,
+                        to,
+                        PieceType::WhitePawn,
+                        true,
+                        false,
+                        None,
+                        false,
+                    ));
+                }
             }
         }
     } //
@@ -193,16 +228,35 @@ impl Board {
             let pawn_bb = 1u64 << from;
 
             // single and double jump
-            if (blockers & 1u64 << (from - 8)) == 0 {
-                moves.push(Move::new(
-                    from,
-                    from - 8,
-                    PieceType::BlackPawn,
-                    false,
-                    false,
-                    (pawn_bb & RANK_2) != 0,
-                    false,
-                ));
+            if (blockers & (1u64 << (from - 8))) == 0 {
+                if (pawn_bb & RANK_2) != 0 {
+                    for piece in [
+                        PieceType::WhiteQueen,
+                        PieceType::WhiteRook,
+                        PieceType::WhiteBishop,
+                        PieceType::WhiteKnight,
+                    ] {
+                        moves.push(Move::new(
+                            from,
+                            from - 8,
+                            PieceType::BlackPawn,
+                            false,
+                            false,
+                            Some(piece),
+                            false,
+                        ));
+                    }
+                } else {
+                    moves.push(Move::new(
+                        from,
+                        from - 8,
+                        PieceType::BlackPawn,
+                        false,
+                        false,
+                        None,
+                        false,
+                    ));
+                }
                 if (((1u64 << from) & RANK_7) != 0) && (blockers & (1u64 << (from - 16))) == 0 {
                     moves.push(Move::new(
                         from,
@@ -210,7 +264,7 @@ impl Board {
                         PieceType::BlackPawn,
                         false,
                         false,
-                        false,
+                        None,
                         false,
                     ));
                 }
@@ -229,7 +283,7 @@ impl Board {
                         PieceType::BlackPawn,
                         true,
                         false,
-                        false,
+                        None,
                         true,
                     ));
                 }
@@ -238,15 +292,34 @@ impl Board {
             while attacks != 0 {
                 let to = attacks.trailing_zeros() as usize;
                 attacks &= attacks - 1;
-                moves.push(Move::new(
-                    from,
-                    to,
-                    PieceType::BlackPawn,
-                    true,
-                    false,
-                    to < 8,
-                    false,
-                ));
+                if to < 8 {
+                    for piece in [
+                        PieceType::WhiteQueen,
+                        PieceType::WhiteRook,
+                        PieceType::WhiteBishop,
+                        PieceType::WhiteKnight,
+                    ] {
+                        moves.push(Move::new(
+                            from,
+                            to,
+                            PieceType::BlackPawn,
+                            true,
+                            false,
+                            Some(piece),
+                            false,
+                        ));
+                    }
+                } else {
+                    moves.push(Move::new(
+                        from,
+                        to,
+                        PieceType::BlackPawn,
+                        true,
+                        false,
+                        None,
+                        false,
+                    ));
+                }
             }
         }
     } //
@@ -279,9 +352,7 @@ impl Board {
                 let to = attacks.trailing_zeros() as usize;
                 attacks &= attacks - 1;
                 let capture = (enemy & (1u64 << to)) != 0;
-                moves.push(Move::new(
-                    from, to, piece_type, capture, false, false, false,
-                ));
+                moves.push(Move::new(from, to, piece_type, capture, false, None, false));
             }
         }
 
@@ -307,9 +378,7 @@ impl Board {
                 let to = attacks.trailing_zeros() as usize;
                 attacks &= attacks - 1;
                 let capture = (enemy & (1u64 << to)) != 0;
-                moves.push(Move::new(
-                    from, to, piece_type, capture, false, false, false,
-                ));
+                moves.push(Move::new(from, to, piece_type, capture, false, None, false));
             }
         }
     } //
@@ -342,9 +411,7 @@ impl Board {
                 let to = attacks.trailing_zeros() as usize;
                 attacks &= attacks - 1;
                 let capture = (enemy_bits.0 & (1u64 << to)) != 0;
-                moves.push(Move::new(
-                    from, to, piece_type, capture, false, false, false,
-                ));
+                moves.push(Move::new(from, to, piece_type, capture, false, None, false));
             }
         }
 
@@ -370,9 +437,7 @@ impl Board {
                 let to = attacks.trailing_zeros() as usize;
                 attacks &= attacks - 1;
                 let capture = (enemy_bits.0 & (1u64 << to)) != 0;
-                moves.push(Move::new(
-                    from, to, piece_type, capture, false, false, false,
-                ));
+                moves.push(Move::new(from, to, piece_type, capture, false, None, false));
             }
         }
     } //
@@ -679,6 +744,7 @@ impl Board {
             last_irreversible_move: self.last_irreversible_move,
             number_of_pawns: self.number_of_pawns,
             number_of_pieces: self.number_of_pieces,
+            promotion_piece: mv.promotion_piece(),
         };
 
         /* -----------------------------
@@ -769,7 +835,7 @@ impl Board {
         } else if is_en_passant {
             match self.turn {
                 Turn::WHITE => {
-                    self.remove_piece(PieceType::BlackPawn, to - 8 , true);
+                    self.remove_piece(PieceType::BlackPawn, to - 8, true);
                     self.remove_piece(PieceType::WhitePawn, from, true);
                     self.add_piece(PieceType::WhitePawn, to, true);
                 }
@@ -782,17 +848,17 @@ impl Board {
         } else {
             // Normal Capture
             if let Some(p) = capture {
-                self.remove_piece(p, to , true);
+                self.remove_piece(p, to, true);
             }
 
-            if piece == PieceType::WhitePawn && to >= 56 {
+            if piece == PieceType::WhitePawn && to >= 56 && mv.promotion_piece().is_some() {
                 // White Promotion
-                self.remove_piece(PieceType::WhitePawn, from , true);
-                self.add_piece(PieceType::WhiteQueen, to, true);
-            } else if piece == PieceType::BlackPawn && to <= 7 {
+                self.remove_piece(PieceType::WhitePawn, from, true);
+                self.add_piece(mv.promotion_piece().unwrap(), to, true);
+            } else if piece == PieceType::BlackPawn && to <= 7 && mv.promotion_piece().is_some() {
                 // Black Promotion
                 self.remove_piece(PieceType::BlackPawn, from, true);
-                self.add_piece(PieceType::BlackQueen, to, true);
+                self.add_piece(mv.promotion_piece().unwrap().flip_color(), to, true);
             } else {
                 // Normal Move
                 self.remove_piece(piece, from, true);
@@ -836,7 +902,12 @@ impl Board {
         }
 
         self.history.push(self.hash);
-        if mv.is_capture() || old_castling_rights != self.castling || is_en_passant || piece == PieceType::WhitePawn || piece == PieceType::BlackPawn {
+        if mv.is_capture()
+            || old_castling_rights != self.castling
+            || is_en_passant
+            || piece == PieceType::WhitePawn
+            || piece == PieceType::BlackPawn
+        {
             self.last_irreversible_move = self.history.len() - 1;
         }
 
@@ -850,7 +921,7 @@ impl Board {
             match (self.opposite_turn(), unmake_move.to) {
                 (Turn::WHITE, 6) => {
                     // e1g1
-                    self.remove_piece(PieceType::WhiteKing, 6 , false);
+                    self.remove_piece(PieceType::WhiteKing, 6, false);
                     self.remove_piece(PieceType::WhiteRook, 5, false);
                     self.add_piece(PieceType::WhiteKing, 4, false);
                     self.add_piece(PieceType::WhiteRook, 7, false);
@@ -891,14 +962,18 @@ impl Board {
                     self.add_piece(PieceType::WhitePawn, unmake_move.to + 8, false);
                 }
             };
-        } else if unmake_move.piece == PieceType::WhitePawn && unmake_move.to >= 56 {
-            self.remove_piece(PieceType::WhiteQueen, unmake_move.to, false);
+        } else if unmake_move.piece == PieceType::WhitePawn && unmake_move.to >= 56  && unmake_move.promotion_piece.is_some() {
+            self.remove_piece(unmake_move.promotion_piece.unwrap(), unmake_move.to, false);
             self.add_piece(PieceType::WhitePawn, unmake_move.from, false);
             if let Some(captured) = unmake_move.captured {
                 self.add_piece(captured, unmake_move.to, false);
             };
-        } else if unmake_move.piece == PieceType::BlackPawn && unmake_move.to <= 7 {
-            self.remove_piece(PieceType::BlackQueen, unmake_move.to, false);
+        } else if unmake_move.piece == PieceType::BlackPawn && unmake_move.to <= 7 && unmake_move.promotion_piece.is_some() {
+            self.remove_piece(
+                unmake_move.promotion_piece.unwrap().flip_color(),
+                unmake_move.to,
+                false,
+            );
             self.add_piece(PieceType::BlackPawn, unmake_move.from, false);
             if let Some(captured) = unmake_move.captured {
                 self.add_piece(captured, unmake_move.to, false);

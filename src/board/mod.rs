@@ -4,15 +4,15 @@ pub mod constants;
 mod engine;
 pub mod move_gen;
 mod openings;
-pub mod rook_magic;
-mod zobrist;
-pub mod tt;
 mod pieces;
+pub mod rook_magic;
+pub mod tt;
+mod zobrist;
 
-use pieces::PieceType;
-use std::ops::{Deref , DerefMut};
 pub use board::Board;
-
+use constants::{PROMO_MASK, PROMO_SHIFT};
+use pieces::PieceType;
+use std::ops::{Deref, DerefMut};
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
 #[repr(transparent)]
@@ -26,7 +26,7 @@ impl Move {
         piece: PieceType,
         capture: bool,
         castling: bool,
-        promotion: bool,
+        promotion: Option<PieceType>,
         en_passant: bool,
     ) -> Self {
         let mut m = from as u32;
@@ -34,8 +34,11 @@ impl Move {
         m |= (piece as u32) << 12;
         m |= (capture as u32) << 16;
         m |= (castling as u32) << 17;
-        m |= (promotion as u32) << 18;
+        m |= (promotion.is_some() as u32) << 18;
         m |= (en_passant as u32) << 19;
+        if let Some(promo) = promotion {
+            m |= (promo as u32) << 20;
+        }
         Move(m)
     }
 
@@ -75,10 +78,20 @@ impl Move {
         s.push((b'a' + file_to) as char);
         s.push((b'1' + rank_to) as char);
 
-        if self.piece() == PieceType::WhitePawn && rank_to == 7 {
-            s.push('q');
-        } else if self.piece() == PieceType::BlackPawn && rank_to == 0 {
-            s.push('q');
+        // if self.piece() == PieceType::WhitePawn && rank_to == 7 {
+        //     s.push('q');
+        // } else if self.piece() == PieceType::BlackPawn && rank_to == 0 {
+        //     s.push('q');
+        // }
+
+        if let Some(promo) = self.promotion_piece() {
+            match promo {
+                PieceType::WhiteQueen | PieceType::BlackQueen => s.push('q'),
+                PieceType::WhiteRook | PieceType::BlackRook => s.push('r'),
+                PieceType::WhiteBishop | PieceType::BlackBishop => s.push('b'),
+                PieceType::WhiteKnight | PieceType::BlackKnight => s.push('n'),
+                _ => (),
+            };
         }
 
         s
@@ -107,7 +120,7 @@ impl Move {
             let piece = board.piece_at[from].unwrap();
 
             if en_passant == to && piece == required_piece {
-                return Move::new(from, to, piece, true, false, false, true);
+                return Move::new(from, to, piece, true, false, None, true);
             }
         }
 
@@ -117,7 +130,7 @@ impl Move {
         // Handle castling
         if piece == PieceType::BlackKing || piece == PieceType::WhiteKing {
             if from.abs_diff(to) == 2 {
-                return Move::new(from, to, piece, false, true, false, false);
+                return Move::new(from, to, piece, false, true, None, false);
             }
         }
 
@@ -125,10 +138,26 @@ impl Move {
             && (piece == PieceType::WhitePawn || piece == PieceType::BlackPawn)
             && (to > 55 || to < 8)
         {
-            return Move::new(from, to, piece, capture, false, true, false);
+            let promotion_char = bytes[4] as char;
+            let promotion_piece = match promotion_char {
+                'q' => PieceType::WhiteQueen,
+                'r' => PieceType::WhiteRook,
+                'b' => PieceType::WhiteBishop,
+                'n' => PieceType::WhiteKnight,
+                _ => panic!("Invalid promotion piece"),
+            };
+            return Move::new(
+                from,
+                to,
+                piece,
+                capture,
+                false,
+                Some(promotion_piece),
+                false,
+            );
         }
 
-        Move::new(from, to, piece, capture, false, false, false)
+        Move::new(from, to, piece, capture, false, None, false)
     } //
 
     #[inline(always)]
@@ -141,6 +170,16 @@ impl Move {
     }
     pub fn move_encoded(self) -> u32 {
         self.0
+    }
+    pub fn is_promotion(self) -> bool {
+        ((self.0 >> 18) & 1) != 0
+    }
+    pub fn promotion_piece(self) -> Option<PieceType> {
+        let idx = ((self.0 & PROMO_MASK) >> PROMO_SHIFT) as u8;
+        if idx == 0 {
+            return None;
+        }
+        unsafe { Some(std::mem::transmute(idx)) }
     }
 } //
 
@@ -162,6 +201,7 @@ pub struct UnMakeMove {
     last_irreversible_move: usize,
     number_of_pieces: usize,
     number_of_pawns: usize,
+    promotion_piece: Option<PieceType>,
 } //
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]

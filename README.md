@@ -5,7 +5,7 @@
 ### Motivation
 **QueenFish** was built as a deliberate learning project, exploring how competitive a complete, non-trivial chess engine can become when constructed from low-level board representation to UCI under controlled complexity growth.
 
-### High-Level
+# High-Level
 The engine is centered around an alpha–beta search implemented in Negamax form, which coordinates all core subsystems. Legal move generation and validation are performed using magic bitboards, while Zobrist hashing is integrated into the search to cache previously evaluated positions and avoid redundant work.
 
 Board state is maintained through incremental updates, allowing moves to be made and unmade with minimal overhead. Performance-critical structures are restored incrementally rather than reallocated, ensuring stability and efficiency at deeper search depths. Moves are encoded into a compact `u32` representation to reduce memory traffic during search.
@@ -55,7 +55,7 @@ option name UseQuiesense type check default true
 option name UseMoveOrder type check default true
 uciok
 position fen r3k2r/Pppp1ppp/1b3nbN/nP6/BBP1P3/q4N2/Pp1P2PP/R2Q1RK1 w kq - 0 1 #user
-go
+go #user
 info depth 1 score cp -306 nodes 224940 time 34 pv c4c5
 info depth 2 score cp -306 nodes 383742 time 58 pv c4c5
 info depth 3 score cp -321 nodes 518773 time 80 pv c4c5

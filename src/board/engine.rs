@@ -486,6 +486,9 @@ impl Board {
                 start_time.elapsed().as_millis(),
                 best_move.to_uci()
             );
+            if best_score > 29_900 {
+                return best_move;
+            }
 
             searched_depth = current_depth;
             best_stable_move = best_move;

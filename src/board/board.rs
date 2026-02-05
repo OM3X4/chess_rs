@@ -44,8 +44,8 @@ impl Board {
             mobility_eval: 0,
             history: Vec::new(),
             last_irreversible_move: 0,
-            number_of_pieces: 0,
-            number_of_pawns: 0,
+            number_of_pieces: 32,
+            number_of_pawns: 16,
         };
 
         board.piece_at = board.generate_piece_at();

@@ -10,6 +10,6 @@ fn main() {
     let mut board = Board::new();
     // board.load_from_fen("1qr1k2r/1p2bp2/pBn1p3/P2pPbpp/5P2/2P1QBPP/1P1N3R/R4K2 b k -");
     let start = std::time::Instant::now();
-    dbg!(board.perft(0,6));
+    dbg!(board.perft(0,3));
     dbg!(start.elapsed());
 }

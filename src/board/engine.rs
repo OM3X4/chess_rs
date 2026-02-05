@@ -1,15 +1,14 @@
+use super::constants::MVV_LVA;
 use crate::board::constants::IS_STOP;
+use crate::board::tt::{Bound, TranspositionTable};
+use crate::board::{Board, Move, Turn};
 use smallvec::SmallVec;
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::time::Duration;
-use super::constants::MVV_LVA;
-use crate::board::{Board, Move, Turn};
-use crate::board::tt::{TranspositionTable, Bound};
 
 static NODE_COUNT: AtomicU64 = AtomicU64::new(0);
 
 impl Board {
-
     #[inline(always)]
     pub fn pieces_score(&self) -> i32 {
         let bbs = &self.bitboards;
@@ -605,4 +604,19 @@ impl Board {
 
         nodes
     } //
+}
+
+mod test {
+    use crate::board::Board;
+    use crate::board::rook_magic::init_rook_magics;
+    use crate::board::bishop_magic::init_bishop_magics;
+
+    #[test]
+    fn test() {
+        init_rook_magics();
+        init_bishop_magics();
+
+        let mut board = Board::new();
+        board.perft(0 , 3);
+    }
 }

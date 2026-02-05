@@ -1,8 +1,8 @@
 fn main() {
-    use chess::board::Board;
+    use queenfish::board::Board;
 
-    use chess::board::bishop_magic::init_bishop_magics;
-    use chess::board::rook_magic::init_rook_magics;
+    use queenfish::board::bishop_magic::init_bishop_magics;
+    use queenfish::board::rook_magic::init_rook_magics;
 
     init_rook_magics();
     init_bishop_magics();

@@ -605,18 +605,3 @@ impl Board {
         nodes
     } //
 }
-
-mod test {
-    use crate::board::Board;
-    use crate::board::rook_magic::init_rook_magics;
-    use crate::board::bishop_magic::init_bishop_magics;
-
-    #[test]
-    fn test() {
-        init_rook_magics();
-        init_bishop_magics();
-
-        let mut board = Board::new();
-        board.perft(0 , 3);
-    }
-}

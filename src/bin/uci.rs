@@ -1,8 +1,8 @@
-use chess::board::constants::IS_STOP;
-use chess::board::rook_magic::init_rook_magics;
-use chess::board::{Move, Turn};
-use chess::board::bishop_magic::init_bishop_magics;
-use chess::board::tt::TranspositionTable;
+use queenfish::board::constants::IS_STOP;
+use queenfish::board::rook_magic::init_rook_magics;
+use queenfish::board::{Move, Turn};
+use queenfish::board::bishop_magic::init_bishop_magics;
+use queenfish::board::tt::TranspositionTable;
 use std::io::{self, Write};
 use std::sync::atomic::Ordering;
 use std::thread;
@@ -11,7 +11,7 @@ fn main() {
     init_bishop_magics();
     init_rook_magics();
 
-    let mut board = chess::board::Board::new();
+    let mut board = queenfish::board::Board::new();
 
     let mut tt = TranspositionTable::new(20);
 
